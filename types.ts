@@ -56,6 +56,18 @@ export interface CommunicationLog {
     notes: string;
 }
 
+export interface ProfessionalDevelopmentLog {
+    id: string;
+    title: string;
+    dateFrom: string; 
+    dateTo: string; 
+    hours: number;
+    type: 'Seminar' | 'Workshop' | 'Training' | 'Graduate Studies' | 'Other';
+    level: 'School' | 'District' | 'Regional' | 'National' | 'International';
+    certificateImage?: string; // base64
+    notes?: string;
+}
+
 export interface Section {
     id: string;
     gradeLevel: string;

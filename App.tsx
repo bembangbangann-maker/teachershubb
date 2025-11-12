@@ -21,6 +21,7 @@ import StudentProfilePage from './components/StudentProfilePage';
 import WheelOfNames from './components/WheelOfNames';
 import OnScreenTutorials from './components/OnScreenTutorials';
 import CareerProgression from './components/CareerProgression';
+import MySeminars from './components/MySeminars';
 
 
 const App: React.FC = () => {
@@ -79,6 +80,7 @@ const App: React.FC = () => {
                 <Route path="settings" element={<Settings />} />
                 <Route path="tutorials" element={<OnScreenTutorials />} />
                 <Route path="career-progression" element={<CareerProgression />} />
+                <Route path="my-seminars" element={<MySeminars />} />
                 <Route path="about" element={<About />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { HomeIcon, UsersIcon, BookOpenIcon, FileTextIcon, NotebookIcon, SettingsIcon, AwardIcon, SparklesIcon, HeartIcon, IdCardIcon, FolderIcon, LockIcon, MailIcon, ClipboardIcon, EyeIcon, EyeOffIcon, InfoIcon, HelpCircleIcon, TargetIcon, ChevronsLeftIcon, ChevronsRightIcon, ListIcon, XIcon, TrendingUpIcon } from './icons';
+import { HomeIcon, UsersIcon, BookOpenIcon, FileTextIcon, NotebookIcon, SettingsIcon, AwardIcon, SparklesIcon, HeartIcon, IdCardIcon, FolderIcon, LockIcon, MailIcon, ClipboardIcon, EyeIcon, EyeOffIcon, InfoIcon, HelpCircleIcon, TargetIcon, ChevronsLeftIcon, ChevronsRightIcon, ListIcon, XIcon, TrendingUpIcon, BriefcaseIcon } from './icons';
 import Modal from './Modal';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from 'react-hot-toast';
@@ -143,6 +143,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
                 >
                   <TrendingUpIcon className={`w-5 h-5 flex-shrink-0 ${!isSidebarCollapsed ? 'mr-4' : 'lg:mr-0'}`} />
                   {!isSidebarCollapsed && <span className="font-semibold whitespace-nowrap">Career Progression</span>}
+                </NavLink>
+            </li>
+            <li className="mb-1">
+                <NavLink
+                  to="/my-seminars"
+                  onClick={handleLinkClick}
+                  className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : ''} ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
+                  title={isSidebarCollapsed ? "My Seminars" : undefined}
+                >
+                  <BriefcaseIcon className={`w-5 h-5 flex-shrink-0 ${!isSidebarCollapsed ? 'mr-4' : 'lg:mr-0'}`} />
+                  {!isSidebarCollapsed && <span className="font-semibold whitespace-nowrap">My Seminars</span>}
                 </NavLink>
             </li>
           </ul>

@@ -1,4 +1,4 @@
-import { Student, Grade, Attendance, Anecdote, SchoolSettings, CommunicationLog, StudentQuarterlyRecord, SubjectQuarterSettings, CertificateSettings, Quarter, UiState, HonorsCalculationData, HonorsCertificateSettings, AttendanceCertificateSettings } from '../types';
+import { Student, Grade, Attendance, Anecdote, SchoolSettings, CommunicationLog, StudentQuarterlyRecord, SubjectQuarterSettings, CertificateSettings, Quarter, UiState, HonorsCalculationData, HonorsCertificateSettings, AttendanceCertificateSettings, ProfessionalDevelopmentLog } from '../types';
 
 const STUDENTS_KEY = 'teachers_hub_students';
 const GRADES_KEY = 'teachers_hub_grades';
@@ -13,6 +13,7 @@ const HONORS_CALC_DATA_KEY = 'teachers_hub_honors_calc_data';
 const HONORS_CERTIFICATE_SETTINGS_KEY = 'teachers_hub_honors_certificate_settings';
 const ATTENDANCE_CERTIFICATE_SETTINGS_KEY = 'teachers_hub_attendance_certificate_settings';
 const UI_STATE_KEY = 'teachers_hub_ui_state';
+const PD_LOGS_KEY = 'teachers_hub_pd_logs';
 
 export const ALL_DATA_KEYS = [
   STUDENTS_KEY,
@@ -28,6 +29,7 @@ export const ALL_DATA_KEYS = [
   HONORS_CERTIFICATE_SETTINGS_KEY,
   ATTENDANCE_CERTIFICATE_SETTINGS_KEY,
   UI_STATE_KEY,
+  PD_LOGS_KEY,
 ];
 
 
@@ -264,6 +266,7 @@ class DataService {
     if (localStorage.getItem(HONORS_CERTIFICATE_SETTINGS_KEY) === null) saveToStorage(HONORS_CERTIFICATE_SETTINGS_KEY, DEFAULT_HONORS_CERTIFICATE_SETTINGS);
     if (localStorage.getItem(ATTENDANCE_CERTIFICATE_SETTINGS_KEY) === null) saveToStorage(ATTENDANCE_CERTIFICATE_SETTINGS_KEY, DEFAULT_ATTENDANCE_CERTIFICATE_SETTINGS);
     if (localStorage.getItem(UI_STATE_KEY) === null) saveToStorage(UI_STATE_KEY, DEFAULT_UI_STATE);
+    if (localStorage.getItem(PD_LOGS_KEY) === null) saveToStorage(PD_LOGS_KEY, []);
   }
 
   // Student data
@@ -273,44 +276,44 @@ class DataService {
   // Grade data
   getGrades = (): Grade[] => getFromStorage(GRADES_KEY, []);
   saveGrades = (grades: Grade[]): void => saveToStorage(GRADES_KEY, grades);
-  
+
   // Attendance data
   getAttendance = (): Attendance[] => getFromStorage(ATTENDANCE_KEY, []);
   saveAttendance = (attendance: Attendance[]): void => saveToStorage(ATTENDANCE_KEY, attendance);
-
+  
   // Anecdote data
   getAnecdotes = (): Anecdote[] => getFromStorage(ANECDOTES_KEY, []);
   saveAnecdotes = (anecdotes: Anecdote[]): void => saveToStorage(ANECDOTES_KEY, anecdotes);
-
-  // Communication Log data
+  
+  // Comm Log data
   getCommunicationLogs = (): CommunicationLog[] => getFromStorage(COMM_LOGS_KEY, []);
   saveCommunicationLogs = (logs: CommunicationLog[]): void => saveToStorage(COMM_LOGS_KEY, logs);
-
-  // School Settings data
+  
+  // Settings
   getSchoolSettings = (): SchoolSettings => getFromStorage(SETTINGS_KEY, DEFAULT_SETTINGS);
   saveSchoolSettings = (settings: SchoolSettings): void => saveToStorage(SETTINGS_KEY, settings);
-
-  // Class Record data
+  
+  // Class Records
   getClassRecords = (): StudentQuarterlyRecord[] => getFromStorage(CLASS_RECORDS_KEY, []);
   saveClassRecords = (records: StudentQuarterlyRecord[]): void => saveToStorage(CLASS_RECORDS_KEY, records);
-
-  // Class Record Settings data
+  
+  // Class Record Settings
   getClassRecordSettings = (): SubjectQuarterSettings[] => getFromStorage(CLASS_RECORD_SETTINGS_KEY, []);
   saveClassRecordSettings = (settings: SubjectQuarterSettings[]): void => saveToStorage(CLASS_RECORD_SETTINGS_KEY, settings);
-
-  // Certificate Settings data
+  
+  // Certificate Settings
   getCertificateSettings = (): CertificateSettings => getFromStorage(CERTIFICATE_SETTINGS_KEY, DEFAULT_CERTIFICATE_SETTINGS);
   saveCertificateSettings = (settings: CertificateSettings): void => saveToStorage(CERTIFICATE_SETTINGS_KEY, settings);
-  
-  // Honors Certificate Settings data
+
+  // Honors Certificate Settings
   getHonorsCertificateSettings = (): HonorsCertificateSettings => getFromStorage(HONORS_CERTIFICATE_SETTINGS_KEY, DEFAULT_HONORS_CERTIFICATE_SETTINGS);
   saveHonorsCertificateSettings = (settings: HonorsCertificateSettings): void => saveToStorage(HONORS_CERTIFICATE_SETTINGS_KEY, settings);
-
-  // Attendance Certificate Settings data
+  
+  // Attendance Certificate Settings
   getAttendanceCertificateSettings = (): AttendanceCertificateSettings => getFromStorage(ATTENDANCE_CERTIFICATE_SETTINGS_KEY, DEFAULT_ATTENDANCE_CERTIFICATE_SETTINGS);
   saveAttendanceCertificateSettings = (settings: AttendanceCertificateSettings): void => saveToStorage(ATTENDANCE_CERTIFICATE_SETTINGS_KEY, settings);
 
-  // Honors Calculation Data
+  // Honors Calc Data
   getHonorsCalculationData = (): HonorsCalculationData[] => getFromStorage(HONORS_CALC_DATA_KEY, []);
   saveHonorsCalculationData = (data: HonorsCalculationData[]): void => saveToStorage(HONORS_CALC_DATA_KEY, data);
 
@@ -318,55 +321,47 @@ class DataService {
   getUiState = (): UiState => getFromStorage(UI_STATE_KEY, DEFAULT_UI_STATE);
   saveUiState = (state: UiState): void => saveToStorage(UI_STATE_KEY, state);
 
+  // Professional Development Logs
+  getPdLogs = (): ProfessionalDevelopmentLog[] => getFromStorage(PD_LOGS_KEY, []);
+  savePdLogs = (logs: ProfessionalDevelopmentLog[]): void => saveToStorage(PD_LOGS_KEY, logs);
 
-  // File Parsing utility - remains as a pure function
-  parseStudentFileContent(fileContent: string): Omit<Student, 'id'>[] {
-    const newStudents: Omit<Student, 'id'>[] = [];
-    const lines = fileContent.split(/\r?\n/);
-    
+  // File parsing logic
+  parseStudentFileContent = (content: string): Omit<Student, 'id'>[] => {
+    const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+    const studentsToAdd: Omit<Student, 'id'>[] = [];
     let currentGender: 'Male' | 'Female' | 'Unspecified' = 'Unspecified';
-
-    lines.forEach(line => {
-      const originalLine = line.trim();
-      if (originalLine === '') return;
-      const upperCaseLine = originalLine.toUpperCase();
-
-      // Check for gender headers and update the current gender context
-      if (upperCaseLine === 'MALE' || upperCaseLine === 'MALES') {
-          currentGender = 'Male';
-          return; // This line is a header, so skip to the next
-      }
-      if (upperCaseLine === 'FEMALE' || upperCaseLine === 'FEMALES') {
-          currentGender = 'Female';
-          return; // This line is a header, so skip to the next
-      }
-
-      const parts = originalLine.split(',').map(p => p.trim());
-      
-      // Basic validation: must have at least a last name and first name.
-      if (parts.length >= 2 && parts[0] && parts[1]) {
-        const lastName = parts[0];
-        const firstName = parts[1];
-
-        // This is a simple check to avoid parsing CSV headers like "LASTNAME, FIRSTNAME" as students.
-        if (lastName.toUpperCase() === 'LAST NAME' || lastName.toUpperCase() === 'LASTNAME') {
-            return;
+    
+    for (const line of lines) {
+        if (line.toLowerCase().includes('male')) {
+            currentGender = 'Male';
+            continue;
+        }
+        if (line.toLowerCase().includes('female')) {
+            currentGender = 'Female';
+            continue;
         }
 
-        newStudents.push({
-          lastName,
-          firstName,
-          middleName: parts[2] || '',
-          lrn: parts[3] || '',
-          gradeLevel: parts[4] || '',
-          section: parts[5] || '',
-          contactInfo: '',
-          gender: currentGender, // Assign the detected gender
-        });
-      }
-    });
-    return newStudents;
-  }
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+            const lastName = parts[0];
+            const firstName = parts[1];
+            const middleName = parts[2] || '';
+            const lrn = parts[3] || '';
+            const gradeLevel = parts[4] || '';
+            const section = parts[5] || '';
+            studentsToAdd.push({
+                lrn,
+                firstName,
+                lastName,
+                middleName,
+                gender: currentGender,
+                gradeLevel,
+                section,
+            });
+        }
+    }
+    return studentsToAdd;
+  };
 }
 
 export const dataService = new DataService();

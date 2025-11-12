@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { Student, Grade, Attendance, Anecdote, CommunicationLog, SchoolSettings, AttendanceStatus, StudentQuarterlyRecord, SubjectQuarterSettings, CertificateSettings, UiState, HonorsCalculationData, HonorsCertificateSettings, AttendanceCertificateSettings } from '../types';
+import { Student, Grade, Attendance, Anecdote, CommunicationLog, SchoolSettings, AttendanceStatus, StudentQuarterlyRecord, SubjectQuarterSettings, CertificateSettings, UiState, HonorsCalculationData, HonorsCertificateSettings, AttendanceCertificateSettings, ProfessionalDevelopmentLog } from '../types';
 import { dataService } from '../services/dataService';
 
 interface AppContextType {
@@ -15,6 +15,7 @@ interface AppContextType {
   honorsCertificateSettings: HonorsCertificateSettings;
   attendanceCertificateSettings: AttendanceCertificateSettings;
   honorsCalculationData: HonorsCalculationData[];
+  pdLogs: ProfessionalDevelopmentLog[];
   uiState: UiState;
   addStudent: (studentData: Omit<Student, 'id'>) => void;
   updateStudent: (studentId: string, updatedData: Partial<Student>) => void;
@@ -24,7 +25,6 @@ interface AppContextType {
   updateGrade: (gradeId: string, newScore: number) => void;
   deleteGrades: (gradeIds: string[]) => void;
   setAttendance: (studentId: string, date: string, status: AttendanceStatus) => void;
-  // Fix: Allow status to be an empty string for batch updates to handle removals.
   batchUpdateAttendance: (updates: { studentId: string; date: string; status: AttendanceStatus | '' }[]) => void;
   removeAttendance: (studentId: string, date: string) => void;
   addAnecdote: (anecdoteData: Omit<Anecdote, 'id'>) => void;
@@ -38,6 +38,9 @@ interface AppContextType {
   updateHonorsCertificateSettings: (settings: Partial<HonorsCertificateSettings>) => void;
   updateAttendanceCertificateSettings: (settings: Partial<AttendanceCertificateSettings>) => void;
   updateHonorsCalculationData: (batchId: string, data: HonorsCalculationData) => void;
+  addPdLog: (logData: Omit<ProfessionalDevelopmentLog, 'id'>) => void;
+  updatePdLog: (logId: string, updatedData: Partial<ProfessionalDevelopmentLog>) => void;
+  deletePdLog: (logId: string) => void;
   updateUiState: (updates: Partial<UiState>) => void;
 }
 
@@ -56,6 +59,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [honorsCertificateSettings, setHonorsCertificateSettings] = useState<HonorsCertificateSettings>(() => dataService.getHonorsCertificateSettings());
   const [attendanceCertificateSettings, setAttendanceCertificateSettings] = useState<AttendanceCertificateSettings>(() => dataService.getAttendanceCertificateSettings());
   const [honorsCalculationData, setHonorsCalculationData] = useState<HonorsCalculationData[]>(() => dataService.getHonorsCalculationData());
+  const [pdLogs, setPdLogs] = useState<ProfessionalDevelopmentLog[]>(() => dataService.getPdLogs());
   const [uiState, setUiState] = useState<UiState>(() => dataService.getUiState());
 
   // --- Persistence Effects ---
@@ -71,6 +75,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { dataService.saveHonorsCertificateSettings(honorsCertificateSettings); }, [honorsCertificateSettings]);
   useEffect(() => { dataService.saveAttendanceCertificateSettings(attendanceCertificateSettings); }, [attendanceCertificateSettings]);
   useEffect(() => { dataService.saveHonorsCalculationData(honorsCalculationData); }, [honorsCalculationData]);
+  useEffect(() => { dataService.savePdLogs(pdLogs); }, [pdLogs]);
   useEffect(() => { dataService.saveUiState(uiState); }, [uiState]);
   
   // Reset resource unlock on every app load for session-based access
@@ -144,7 +149,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   }, []);
 
-  // Fix: Allow status to be an empty string for batch updates to handle removals.
   const batchUpdateAttendance = useCallback((updates: { studentId: string; date: string; status: AttendanceStatus | '' }[]) => {
     if (updates.length === 0) return;
 
@@ -152,12 +156,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const updatesMap = new Map(updates.map(u => [`${u.studentId}-${u.date}`, u.status]));
         const updatedStudentDateKeys = new Set(updates.map(u => `${u.studentId}-${u.date}`));
 
-        // Filter out records that are being updated or removed
         const otherRecords = prev.filter(att => !updatedStudentDateKeys.has(`${att.studentId}-${att.date}`));
 
-        // Create new records for non-empty statuses
         const newRecords = updates
-            .filter((u): u is { studentId: string; date: string; status: AttendanceStatus } => u.status !== '') // Don't create records for 'present' if it means blank
+            .filter((u): u is { studentId: string; date: string; status: AttendanceStatus } => u.status !== '')
             .map(u => ({
                 id: `att${Date.now()}_${u.studentId}_${Math.random()}`,
                 studentId: u.studentId,
@@ -257,6 +259,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   }, []);
 
+  const addPdLog = useCallback((logData: Omit<ProfessionalDevelopmentLog, 'id'>) => {
+    const newLog = { ...logData, id: `pd_${Date.now()}`};
+    setPdLogs(prev => [newLog, ...prev.sort((a, b) => new Date(b.dateFrom).getTime() - new Date(a.dateFrom).getTime())]);
+  }, []);
+
+  const updatePdLog = useCallback((logId: string, updatedData: Partial<ProfessionalDevelopmentLog>) => {
+    setPdLogs(prev => prev.map(log => log.id === logId ? { ...log, ...updatedData } : log));
+  }, []);
+
+  const deletePdLog = useCallback((logId: string) => {
+    setPdLogs(prev => prev.filter(log => log.id !== logId));
+  }, []);
+
   const updateUiState = useCallback((updates: Partial<UiState>) => {
       setUiState(prev => ({ ...prev, ...updates }));
   }, []);
@@ -274,6 +289,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     honorsCertificateSettings,
     attendanceCertificateSettings,
     honorsCalculationData,
+    pdLogs,
     uiState,
     addStudent,
     updateStudent,
@@ -296,8 +312,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     updateHonorsCertificateSettings,
     updateAttendanceCertificateSettings,
     updateHonorsCalculationData,
+    addPdLog,
+    updatePdLog,
+    deletePdLog,
     updateUiState,
-  }), [students, grades, attendance, anecdotes, commLogs, settings, classRecords, classRecordSettings, certificateSettings, honorsCertificateSettings, attendanceCertificateSettings, honorsCalculationData, uiState, addStudent, updateStudent, deleteStudent, batchAddStudents, addGrades, updateGrade, deleteGrades, setAttendance, batchUpdateAttendance, removeAttendance, addAnecdote, updateAnecdote, addCommunicationLog, saveSchoolSettings, updateClassRecord, batchUpdateClassRecords, updateClassRecordSettings, updateCertificateSettings, updateHonorsCertificateSettings, updateAttendanceCertificateSettings, updateHonorsCalculationData, updateUiState]);
+  }), [students, grades, attendance, anecdotes, commLogs, settings, classRecords, classRecordSettings, certificateSettings, honorsCertificateSettings, attendanceCertificateSettings, honorsCalculationData, pdLogs, uiState, addStudent, updateStudent, deleteStudent, batchAddStudents, addGrades, updateGrade, deleteGrades, setAttendance, batchUpdateAttendance, removeAttendance, addAnecdote, updateAnecdote, addCommunicationLog, saveSchoolSettings, updateClassRecord, batchUpdateClassRecords, updateClassRecordSettings, updateCertificateSettings, updateHonorsCertificateSettings, updateAttendanceCertificateSettings, updateHonorsCalculationData, addPdLog, updatePdLog, deletePdLog, updateUiState]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
