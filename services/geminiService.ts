@@ -10,7 +10,12 @@ import { toast } from "react-hot-toast";
  * @param jsonString The raw string response from the AI model.
  * @returns The parsed JSON object.
  */
-const parseJsonFromAiResponse = <T>(jsonString: string): T => {
+const parseJsonFromAiResponse = <T>(jsonString: string | undefined | null): T => {
+    // FIX: Guard against null, undefined, or empty string responses from the AI.
+    // This prevents the '.trim()' error and ensures graceful failure.
+    if (!jsonString || jsonString.trim() === '') {
+        throw new Error("AI returned no text content to parse.");
+    }
     // The AI may wrap the JSON in ```json ... ```, so we strip it.
     const sanitizedString = jsonString.trim().replace(/^```json\s*|```\s*$/g, '');
     try {
