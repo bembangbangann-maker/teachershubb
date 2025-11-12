@@ -127,6 +127,14 @@ const CareerProgression: React.FC = () => {
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const [detailsForPosition, setDetailsForPosition] = useState<string | null>(null);
 
+    const availableSchoolYears = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+            years.push(`${i}-${i + 1}`);
+        }
+        return years;
+    }, []);
     
     useEffect(() => {
         const savedState = localStorage.getItem('careerProgressionState');
@@ -252,8 +260,18 @@ const CareerProgression: React.FC = () => {
                                         <tr className="bg-base-300/50">
                                             <th className="border border-base-100 p-1" rowSpan={2}>Objectives</th>
                                             {t2t7SchoolYears.map((year: string, index: number) => (
-                                                <th key={year} className="border border-base-100 p-1" colSpan={3}>
-                                                    <input type="text" value={year} onChange={(e) => { const newYears = [...t2t7SchoolYears]; newYears[index] = e.target.value; setT2T7SchoolYears(newYears); }} className="bg-transparent text-center font-bold w-full p-1" />
+                                                <th key={year + index} className="border border-base-100 p-1" colSpan={3}>
+                                                    <select 
+                                                        value={year} 
+                                                        onChange={(e) => { 
+                                                            const newYears = [...t2t7SchoolYears]; 
+                                                            newYears[index] = e.target.value; 
+                                                            setT2T7SchoolYears(newYears); 
+                                                        }} 
+                                                        className="bg-transparent text-center font-bold w-full p-1"
+                                                    >
+                                                        {availableSchoolYears.map(sy => <option key={sy} value={sy}>{sy}</option>)}
+                                                    </select>
                                                 </th>
                                             ))}
                                         </tr>
@@ -342,6 +360,30 @@ const CareerProgression: React.FC = () => {
                                     {allTeacherPositions.map(pos => <option key={pos} value={pos}>{pos} (SG {salaryGrades[pos]})</option>)}
                                 </select>
                             </div>
+
+                            {hasRatings && (
+                                <div className="mb-6 bg-base-100 p-4 rounded-lg">
+                                    <h4 className="font-bold text-base-content mb-3 text-center">Performance Summary</h4>
+                                    <div className="grid grid-cols-2 gap-4 text-center">
+                                        <div className="bg-base-300 p-3 rounded-md">
+                                            <p className="text-2xl font-bold text-primary">{t2t7UserCounts.coi.vs + t2t7UserCounts.coi.o}</p>
+                                            <p className="text-xs">Proficient COIs (VS or O)</p>
+                                        </div>
+                                        <div className="bg-base-300 p-3 rounded-md">
+                                            <p className="text-2xl font-bold text-primary">{t2t7UserCounts.ncoi.vs + t2t7UserCounts.ncoi.o}</p>
+                                            <p className="text-xs">Proficient NCOIs (VS or O)</p>
+                                        </div>
+                                        <div className="bg-base-300 p-3 rounded-md">
+                                            <p className="text-2xl font-bold text-yellow-400">{t2t7UserCounts.coi.o}</p>
+                                            <p className="text-xs">Outstanding COIs</p>
+                                        </div>
+                                        <div className="bg-base-300 p-3 rounded-md">
+                                            <p className="text-2xl font-bold text-yellow-400">{t2t7UserCounts.ncoi.o}</p>
+                                            <p className="text-xs">Outstanding NCOIs</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                              {hasRatings ? (
                                 <div className="space-y-4">
