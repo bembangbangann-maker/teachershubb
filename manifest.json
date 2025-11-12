@@ -1,0 +1,17 @@
+{
+  "name": "Teacher's HUB",
+  "short_name": "Teacher's Hub",
+  "description": "A secure, offline-first Progressive Web App (PWA) for public school teachers that automates and centralizes all essential administrative tasks.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#2D3748",
+  "theme_color": "#38B2AC",
+  "icons": [
+    {
+      "src": "vite.svg",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 256x256 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

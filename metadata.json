@@ -1,0 +1,8 @@
+{
+  "name": "Copy of teachershub",
+  "description": "A secure, offline-first Progressive Web App (PWA) for public school teachers that automates and centralizes all essential administrative tasks, including student records, grading, and official form generation.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}

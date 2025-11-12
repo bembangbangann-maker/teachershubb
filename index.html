@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Teacher's Administrative Hub</title>
+
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#38B2AC">
+
+    <!-- iOS PWA Support -->
+    <link rel="apple-touch-icon" href="/vite.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Teacher's Hub">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Dancing+Script:wght@400;700&family=Lobster&family=Roboto+Slab:wght@400;700&family=Alegreya:ital,wght@0,400..900;1,400..900&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Sacramento&family=Cinzel:wght@400;700&family=EB+Garamond:wght@400;700&family=Tangerine:wght@400;700&family=Pinyon+Script&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Arvo:ital,wght@0,400;0,700;1,400;1,700&family=Alex+Brush&family=Allura&family=Italianno&family=UnifrakturCook:wght@700&family=Meddon&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary': 'var(--primary)',
+              'primary-focus': 'var(--primary-focus)',
+              'primary-content': 'var(--primary-content)',
+              'secondary': 'var(--secondary)',
+              'secondary-focus': 'var(--secondary-focus)',
+              'base-100': 'var(--base-100)',
+              'base-200': 'var(--base-200)',
+              'base-300': 'var(--base-300)',
+              'base-content': 'var(--base-content)',
+              'info': 'var(--info)',
+              'success': 'var(--success)',
+              'warning': 'var(--warning)',
+              'error': 'var(--error)',
+            },
+            fontFamily: {
+              'playfair': ['"Playfair Display"', 'serif'],
+              'merriweather': ['"Merriweather"', 'serif'],
+              'great-vibes': ['"Great Vibes"', 'cursive'],
+              'dancing-script': ['"Dancing Script"', 'cursive'],
+              'lobster': ['"Lobster"', 'cursive'],
+              'roboto-slab': ['"Roboto Slab"', 'serif'],
+              'alegreya': ['"Alegreya"', 'serif'],
+              'cormorant': ['"Cormorant Garamond"', 'serif'],
+              'old-standard': ['"Old Standard TT"', 'serif'],
+              'sacramento': ['"Sacramento"', 'cursive'],
+              'cinzel': ['"Cinzel"', 'serif'],
+              'eb-garamond': ['"EB Garamond"', 'serif'],
+              'tangerine': ['"Tangerine"', 'cursive'],
+              'pinyon-script': ['"Pinyon Script"', 'cursive'],
+              'libre-baskerville': ['"Libre Baskerville"', 'serif'],
+              'arvo': ['"Arvo"', 'serif'],
+              'alex-brush': ['"Alex Brush"', 'cursive'],
+              'allura': ['"Allura"', 'cursive'],
+              'italianno': ['"Italianno"', 'cursive'],
+              'unifrakturcook': ['"UnifrakturCook"', 'cursive'],
+              'meddon': ['"Meddon"', 'cursive'],
+              'im-fell': ['"IM Fell English"', 'serif'],
+              'bookman': ['"Bookman Old Style"', 'serif'],
+            }
+          },
+        },
+      }
+    </script>
+    
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.12.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.7.1",
+    "react-hot-toast": "https://esm.sh/react-hot-toast@^2.4.1",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "mammoth": "https://esm.sh/mammoth@1.7.0",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "docx": "https://esm.sh/docx@8.5.0",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.3",
+    "vite": "https://aistudiocdn.com/vite@^7.2.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
+    "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.5.5"
+  }
+}
+</script>
+<style>
+    :root {
+        --primary: #38B2AC;
+        --primary-focus: #2C7A7B;
+        --primary-content: #ffffff;
+        --secondary: #4A5568;
+        --secondary-focus: #2D3748;
+        --base-100: #2D3748;
+        --base-200: #1F2237;
+        --base-300: #4B5563;
+        --base-content: #D1D5DB;
+        --info: #2563EB;
+        --success: #16A34A;
+        --warning: #F59E0B;
+        --error: #DC2626;
+    }
+    
+    .themed-toast {
+        background-color: #374151;
+        color: #D1D5DB;
+    }
+
+
+    /* Special classes to swap element visibility for PDF export */
+    .print-only {
+        display: none !important;
+    }
+
+    /* --- PDF EXPORT STYLES (For html2canvas library) --- */
+    body.pdf-export-active #printable-record-clone,
+    body.pdf-export-active #printable-form {
+        background-color: white !important;
+        color: black !important;
+        padding: 0 !important;
+        font-family: 'Bookman Old Style', 'Times New Roman', Times, serif;
+    }
+    body.pdf-export-active #printable-record-clone *,
+    body.pdf-export-active #printable-form * {
+        background-color: transparent !important;
+        color: black !important;
+        border-color: #000 !important;
+        font-family: inherit;
+    }
+    body.pdf-export-active #printable-record-clone .print-hide-col,
+    body.pdf-export-active #printable-form .print-hide {
+      display: none !important;
+    }
+    
+    /* --- Styles for PNG export of Student Profile --- */
+    body.png-export-active #student-profile-printable,
+    body.png-export-active #student-profile-printable .bg-base-200,
+    body.png-export-active #student-profile-printable .bg-base-100 {
+        background-color: white !important;
+    }
+    body.png-export-active #student-profile-printable *,
+    body.png-export-active #student-profile-printable .text-primary,
+    body.png-export-active #student-profile-printable .text-base-content,
+    body.png-export-active #student-profile-printable .text-base-content\/70 {
+        color: black !important;
+    }
+    body.png-export-active #student-profile-printable .border-base-300 {
+        border-color: #ccc !important;
+    }
+    body.png-export-active #student-profile-printable .text-error {
+        color: #DC2626 !important;
+    }
+     body.png-export-active #student-profile-printable .text-success {
+        color: #16A34A !important;
+    }
+
+
+    /* NEW E-CLASS RECORD PRINT STYLES */
+    #printable-record-clone {
+      font-size: 13pt !important; /* Increased base font size for readability */
+    }
+    #printable-record-clone .print-header-field {
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+      font-size: 11pt;
+    }
+    #printable-record-clone th,
+    #printable-record-clone td {
+      border: 1px solid #000 !important;
+      padding: 4px 5px !important;
+      font-size: 10pt;
+      vertical-align: middle;
+    }
+    #printable-record-clone .print-main-title {
+        font-size: 26pt !important;
+        font-weight: bold;
+    }
+    #printable-record-clone .print-subtitle {
+      font-size: 10pt !important;
+    }
+    #printable-record-clone .print-category-header {
+      font-size: 9pt !important;
+      font-weight: bold;
+    }
+     #printable-record-clone .print-component-header {
+      font-size: 8pt !important;
+    }
+     #printable-record-clone .print-final-grade-header {
+      font-size: 10pt !important;
+      font-weight: bold;
+    }
+    
+    .certificate-bg-plain {
+        background-color: #ffffff;
+    }
+    .certificate-bg-gradient {
+        background-color: #f5f5f5;
+        background-image: radial-gradient(circle at top left, #a8e6cf 20%, transparent 50%),
+                          radial-gradient(circle at bottom right, #dcedc1 20%, transparent 50%);
+    }
+    .certificate-bg-dots {
+        background-color: #ffffff;
+        background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+        background-size: 15px 15px;
+    }
+    .certificate-bg-lines {
+        background-color: #f8f8f8;
+        background-image: linear-gradient(45deg, #e0e0e0 25%, transparent 25%), 
+                          linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+                          linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
+                          linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+        background-size: 20px 20px;
+    }
+    .certificate-bg-border-simple {
+        background-color: #ffffff;
+        position: relative;
+    }
+    .certificate-bg-border-simple::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        border: 1px solid #c0c0c0;
+        pointer-events: none;
+    }
+     .certificate-bg-geometric {
+        background-color: #f9f9f9;
+        background-image:  linear-gradient(30deg, #f0f0f0 12%, transparent 12.5%, transparent 87%, #f0f0f0 87.5%, #f0f0f0), linear-gradient(150deg, #f0f0f0 12%, transparent 12.5%, transparent 87%, #f0f0f0 87.5%, #f0f0f0), linear-gradient(30deg, #f0f0f0 12%, transparent 12.5%, transparent 87%, #f0f0f0 87.5%, #f0f0f0), linear-gradient(150deg, #f0f0f0 12%, transparent 12.5%, transparent 87%, #f0f0f0 87.5%, #f0f0f0), linear-gradient(60deg, #e8e8e8 25%, transparent 25.5%, transparent 75%, #e8e8e8 75%, #e8e8e8), linear-gradient(60deg, #e8e8e8 25%, transparent 25.5%, transparent 75%, #e8e8e8 75%, #e8e8e8);
+        background-size: 40px 70px;
+        background-position: 0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px;
+    }
+    .certificate-bg-border-double {
+        background-color: #ffffff;
+        position: relative;
+    }
+    .certificate-bg-border-double::before, .certificate-bg-border-double::after {
+        content: '';
+        position: absolute;
+        border: solid #c0c0c0;
+        pointer-events: none;
+    }
+    .certificate-bg-border-double::before {
+        top: 10px; left: 10px; right: 10px; bottom: 10px;
+        border-width: 2px;
+    }
+    .certificate-bg-border-double::after {
+        top: 15px; left: 15px; right: 15px; bottom: 15px;
+        border-width: 1px;
+    }
+    .certificate-bg-border-elegant {
+        background-color: #fcfcfc;
+        border: 1px solid #d1d5db;
+        background-image:
+            radial-gradient(circle at 0 0, transparent 20px, #d1d5db 20px, #d1d5db 21px, transparent 21px),
+            radial-gradient(circle at 100% 0, transparent 20px, #d1d5db 20px, #d1d5db 21px, transparent 21px),
+            radial-gradient(circle at 100% 100%, transparent 20px, #d1d5db 20px, #d1d5db 21px, transparent 21px),
+            radial-gradient(circle at 0 100%, transparent 20px, #d1d5db 20px, #d1d5db 21px, transparent 21px);
+    }
+    .certificate-bg-watermark {
+        background-color: #ffffff;
+        position: relative;
+    }
+    .certificate-bg-watermark::after {
+        content: 'CERTIFIED';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 10rem;
+        font-weight: bold;
+        color: rgba(0, 0, 0, 0.05);
+        pointer-events: none;
+        font-family: 'Merriweather', serif;
+    }
+    .certificate-bg-confetti {
+        background-color: #fff;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d3d3d3' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* New Background Styles */
+    .certificate-bg-parchment {
+        background-color: #fdf5e6;
+        background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Cg fill-rule="evenodd"%3E%3Cg fill="%23d2b48c" fill-opacity="0.08"%3E%3Cpath opacity=".5" d="M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z"/%3E%3Cpath d="M6 5V0h1v5h5v1H6v5H5V6H0V5h5z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+    }
+    .certificate-bg-guilloche {
+        background-color: #f0f8ff;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='%23d0e0f0' fill-opacity='0.4'%3E%3Cpath d='M0 50A50 50 0 0 1 50 0v50H0z'/%3E%3Cpath d='M100 50A50 50 0 0 0 50 0v50h50z'/%3E%3Cpath d='M0 50A50 50 0 0 0 50 100V50H0z'/%3E%3Cpath d='M100 50A50 50 0 0 1 50 100V50h50z'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: 50px 50px;
+    }
+    .certificate-bg-foil-corners {
+        background-color: #ffffff;
+        position: relative;
+    }
+    .certificate-bg-foil-corners::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border: 15px solid transparent;
+        border-image: linear-gradient(45deg, gold, #d4af37, gold) 1;
+        pointer-events: none;
+    }
+    .certificate-bg-floral-border {
+        background-color: #ffffff;
+        border: 20px solid transparent;
+        border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cstyle%3Epath %7B fill: %23c0c0c0; %7D%3C/style%3E%3Cpath d='M15 3h30v3H15zM3 15h3v30H3zM57 15h3v30h-3zM15 54h30v3H15z'/%3E%3Cpath d='M15 15m-3 0a3 3 0 1 0 6 0 3 3 0 1 0-6 0'/%3E%3Cpath d='M45 15m-3 0a3 3 0 1 0 6 0 3 3 0 1 0-6 0'/%3E%3Cpath d='M15 45m-3 0a3 3 0 1 0 6 0 3 3 0 1 0-6 0'/%3E%3Cpath d='M45 45m-3 0a3 3 0 1 0 6 0 3 3 0 1 0-6 0'/%3E%3C/svg%3E") 20 round;
+    }
+    .certificate-bg-wavy-lines {
+        background-color: #ffffff;
+        background-image:
+            repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 1px, transparent 1px, transparent 10px),
+            repeating-linear-gradient(-45deg, #f0f0f0, #f0f0f0 1px, transparent 1px, transparent 10px);
+        background-size: 20px 20px;
+    }
+    .certificate-bg-school-emblem {
+        background-color: #ffffff;
+        position: relative;
+    }
+    .certificate-bg-school-emblem::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 200px;
+        height: 200px;
+        transform: translate(-50%, -50%);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 L90 35 L90 65 L50 90 L10 65 L10 35 Z' fill='none' stroke='%23000' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='15' fill='none' stroke='%23000' stroke-width='2'/%3E%3Cpath d='M35 50 h30 M50 35 v30' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        opacity: 0.05;
+        pointer-events: none;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #student-profile-printable, #student-profile-printable * {
+            visibility: visible;
+        }
+        #student-profile-printable {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 20px;
+            font-size: 10pt;
+            background-color: white !important;
+            color: black !important;
+        }
+        #student-profile-printable .print-hide {
+            display: none !important;
+        }
+        #student-profile-printable * {
+            background-color: transparent !important;
+            color: black !important;
+            border-color: #ccc !important;
+            box-shadow: none !important;
+        }
+    }
+
+    /* Custom scrollbar for sidebar nav */
+    .sidebar-nav-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent; /* Initially transparent for Firefox */
+    }
+    .sidebar-nav-scroll:hover {
+        scrollbar-color: var(--primary) transparent; /* Visible on hover for Firefox */
+    }
+    .sidebar-nav-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+    .sidebar-nav-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+        background-color: transparent; /* Initially transparent */
+        border-radius: 4px;
+    }
+    .sidebar-nav-scroll:hover::-webkit-scrollbar-thumb {
+        background-color: var(--primary); /* Visible on hover */
+    }
+
+</style>
+</head>
+  <body class="bg-base-100 text-base-content">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
