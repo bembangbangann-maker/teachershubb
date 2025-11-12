@@ -865,8 +865,62 @@ export const generateRubricForActivity = async (details: { activityName: string,
     }
 };
 
+const dllDailyEntrySchema = {
+    type: Type.OBJECT,
+    properties: {
+        monday: { type: Type.STRING },
+        tuesday: { type: Type.STRING },
+        wednesday: { type: Type.STRING },
+        thursday: { type: Type.STRING },
+        friday: { type: Type.STRING },
+    },
+    required: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+};
 
-const dllContentSchema = { /* Define as needed */ }; // Placeholder
+const dllProcedureSchema = {
+    type: Type.OBJECT,
+    properties: {
+        procedure: { type: Type.STRING },
+        ...dllDailyEntrySchema.properties,
+    },
+    required: ["procedure", "monday", "tuesday", "wednesday", "thursday", "friday"],
+};
+
+const dllContentSchema = {
+    type: Type.OBJECT,
+    properties: {
+        contentStandard: { type: Type.STRING, description: "Official DepEd Content Standard for the week." },
+        performanceStandard: { type: Type.STRING, description: "Official DepEd Performance Standard for the week." },
+        learningCompetencies: { 
+            ...dllDailyEntrySchema,
+            description: "Daily learning competencies or objectives for the week."
+        },
+        content: { type: Type.STRING, description: "The main content or topic for the week." },
+        learningResources: {
+            type: Type.OBJECT,
+            properties: {
+                teacherGuidePages: dllDailyEntrySchema,
+                learnerMaterialsPages: dllDailyEntrySchema,
+                textbookPages: dllDailyEntrySchema,
+                additionalMaterials: dllDailyEntrySchema,
+                otherResources: dllDailyEntrySchema,
+            },
+            required: ["teacherGuidePages", "learnerMaterialsPages", "textbookPages", "additionalMaterials", "otherResources"],
+        },
+        procedures: {
+            type: Type.ARRAY,
+            items: dllProcedureSchema,
+            description: "An array of procedure steps for the week, with daily activities.",
+        },
+        remarks: { type: Type.STRING, description: "Teacher's remarks for the week." },
+        reflection: {
+            type: Type.ARRAY,
+            items: dllProcedureSchema,
+            description: "An array of reflection points for the week.",
+        },
+    },
+    required: ["contentStandard", "performanceStandard", "learningCompetencies", "content", "learningResources", "procedures", "remarks", "reflection"],
+};
 
 export const generateDllContent = async (details: {
     subject: string;
@@ -879,21 +933,26 @@ export const generateDllContent = async (details: {
     language: 'English' | 'Filipino';
 }): Promise<DllContent> => {
     const model = "gemini-2.5-pro";
-    // ... (rest of the implementation for generateDllContent using callApiProxy)
-    
-    // This is a placeholder for the actual implementation
-    // For now, let's just throw an error so it's clear it needs to be implemented
-    // throw new Error("generateDllContent with proxy is not fully implemented yet.");
-    // Since this is a complex function, I will just provide the callApiProxy part for now.
-    
+    const { subject, gradeLevel, weeklyTopic, contentStandard, performanceStandard, teachingDates, quarter, language } = details;
+
     const prompt = `
-    Create a Daily Lesson Log (DLL) for a week.
-    Subject: ${details.subject}
-    Grade Level: ${details.gradeLevel}
-    Weekly Topic: ${details.weeklyTopic || 'AI will suggest a relevant weekly topic'}
-    Content Standard: ${details.contentStandard || 'AI will generate based on the subject and grade level'}
-    Performance Standard: ${details.performanceStandard || 'AI will generate based on the subject and grade level'}
-    Language: ${details.language}
+    Act as an expert Filipino instructional designer for a ${gradeLevel} ${subject} class. Your task is to generate a comprehensive Daily Lesson Log (DLL) for an entire week, strictly following the Philippine Department of Education (DepEd) format.
+
+    **Teacher's Input:**
+    - **Language:** ${language} (The entire output MUST be in this language)
+    - **Subject:** ${subject}
+    - **Grade Level:** ${gradeLevel}
+    - **Quarter:** ${quarter}
+    - **Teaching Dates:** ${teachingDates}
+    - **Weekly Topic:** ${weeklyTopic || 'AI will generate a relevant topic based on the curriculum.'}
+    - **Content Standard:** ${contentStandard || 'AI will generate the official standard from the DepEd curriculum guide.'}
+    - **Performance Standard:** ${performanceStandard || 'AI will generate the official standard from the DepEd curriculum guide.'}
+
+    **CRITICAL INSTRUCTIONS:**
+    1.  **Generate for a Full 5-Day Week:** Populate the content for Monday, Tuesday, Wednesday, Thursday, and Friday for all relevant sections.
+    2.  **Official Standards:** If not provided, generate the official DepEd Content and Performance Standards for the subject, grade, and quarter.
+    3.  **Daily Breakdown:** For procedures and reflections, provide distinct, day-by-day activities and questions. Do not just copy the same text for each day.
+    4.  **Structure Adherence:** The entire output must be a single, valid JSON object that strictly adheres to the provided schema. Ensure every required field is present.
     `;
 
     try {
@@ -902,13 +961,11 @@ export const generateDllContent = async (details: {
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                // A schema would be needed here for a real implementation
-                // responseSchema: dllContentSchema, 
+                responseSchema: dllContentSchema,
                 safetySettings,
             },
         });
         const jsonText = response.text.trim();
-        // The parsing logic would need to be very robust here
         return JSON.parse(jsonText) as DllContent;
     } catch (error) {
         throw handleGeminiError(error, 'generateDllContent');
