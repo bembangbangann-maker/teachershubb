@@ -21,8 +21,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const response = await ai.models.generateContent(modelOptions);
         
-        // Send the successful response back to the frontend
-        res.status(200).json(response);
+        // The `response` object is a class instance with getters. To ensure reliable
+        // JSON serialization across the network, we manually construct a plain object.
+        // The `response.text` getter is called here on the server, where the full object exists.
+        const serializableResponse = {
+            text: response.text,
+            functionCalls: response.functionCalls,
+            // We include candidates and other properties in case the frontend needs more detailed info.
+            candidates: response.candidates,
+            promptFeedback: response.promptFeedback,
+        };
+
+        res.status(200).json(serializableResponse);
 
     } catch (error: any) {
         console.error("Error in Gemini API route:", error);

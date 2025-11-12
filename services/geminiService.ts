@@ -259,7 +259,11 @@ export const processAttendanceCommand = async (command: string, students: Studen
         }]
     };
     const studentListWithIds = students.map(s => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }));
-    const prompt = `Interpret the command and call the 'update_attendance' function. Use student IDs from this list: ${JSON.stringify(studentListWithIds)}. Command: "${command}"`;
+    const prompt = `Your task is to update student attendance by interpreting a command and using the 'update_attendance' function. You MUST use the student IDs from the list provided. Do not guess names or make up IDs. If a name in the command is ambiguous or not found in the list, respond with a text message asking for clarification instead of calling the function.
+    
+    Student List: ${JSON.stringify(studentListWithIds)}
+    
+    Command: "${command}"`;
 
     try {
         const response = await callApiProxy({
@@ -268,14 +272,18 @@ export const processAttendanceCommand = async (command: string, students: Studen
         
         const call = response.functionCalls?.[0];
         if (!call) {
-            // If no function call, check if there's a text response suggesting clarification
+            // If the AI didn't call the function, it's likely asking for clarification.
+            // We throw this as an error so the UI can display it in a single, consistent way.
             if (response.text?.trim()) {
-                toast.error(`AI needs more info: ${response.text}`);
+                throw new Error(`AI needs clarification: ${response.text}`);
             }
-            return null;
+            throw new Error("AI could not determine which students to update. Please try rephrasing your command.");
         }
+        
         const args = call.args as { status: AttendanceStatus; student_ids: string[] };
-        if (!args.status || !args.student_ids) return null;
+        if (!args.status || !args.student_ids) {
+            throw new Error("AI returned an incomplete function call.");
+        };
 
         if (args.student_ids.includes("ALL_STUDENTS")) {
             return { status: args.status, studentIds: students.map(s => s.id) };
