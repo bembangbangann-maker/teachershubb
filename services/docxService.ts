@@ -28,7 +28,7 @@ import {
   VerticalPositionAlign,
   ShadingType,
 } from 'docx';
-import { Student, SchoolSettings, Attendance, Quarter, SubjectQuarterSettings, StudentQuarterlyRecord, MapehRecordDocxData, GeneratedQuiz, GeneratedQuizQuestion, DlpContent, DlpProcedure, QuizType, DllContent, DllObjectives, DllDailyEntry, DllProcedure as DllProcedureType, DlpRubricItem, StudentProfileDocxData } from '../types';
+import { Student, SchoolSettings, Attendance, Quarter, SubjectQuarterSettings, StudentQuarterlyRecord, MapehRecordDocxData, GeneratedQuiz, GeneratedQuizQuestion, DlpContent, DlpProcedure, QuizType, DllContent, DllObjectives, DllDailyEntry, DllProcedure as DllProcedureType, DlpRubricItem, StudentProfileDocxData, LearningActivitySheet } from '../types';
 import { toast } from 'react-hot-toast';
 
 interface SummaryOfGradesDocxData {
@@ -1522,6 +1522,124 @@ class DocxService {
 
         const blob = await Packer.toBlob(doc);
         this.downloadBlob(blob, `Weekly_Plan_${dllForm.subject}_${dllForm.gradeLevel}.docx`);
+    }
+
+    // Fix: Add missing generateLasDocx method
+    public async generateLasDocx(details: {
+        schoolYear: string;
+        schoolName: string;
+        teacherName: string;
+        subject: string;
+        gradeLevel: string;
+    }, lasContent: LearningActivitySheet): Promise<void> {
+        const font = "Times New Roman";
+        const text = (txt: string, options: Omit<IRunOptions, 'children'> = {}) => new TextRun({ text: txt, font, size: 24, ...options }); // 12pt
+        const boldText = (txt: string, options: Omit<IRunOptions, 'children'> = {}) => text(txt, { bold: true, ...options });
+        const p = (children: (TextRun | ImageRun)[], options: IParagraphOptions = {}) => new Paragraph({ children, ...options });
+
+        const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: "000000" };
+        const createCell = (children: (Paragraph|Table)[], options: any = {}) => new TableCell({ children, borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder }, verticalAlign: VerticalAlign.CENTER, ...options });
+
+        const docChildren: (Paragraph | Table)[] = [];
+
+        // Header
+        docChildren.push(p([boldText(details.schoolName.toUpperCase(), { size: 28 })], { alignment: AlignmentType.CENTER }));
+        docChildren.push(p([text(`SY ${details.schoolYear}`)], { alignment: AlignmentType.CENTER }));
+        docChildren.push(p([text(`${details.subject} - Grade ${details.gradeLevel}`)], { alignment: AlignmentType.CENTER }));
+        docChildren.push(p([text(`Teacher: ${details.teacherName}`)], { alignment: AlignmentType.CENTER }));
+        docChildren.push(p([]));
+
+        // Title
+        docChildren.push(p([boldText(lasContent.activityTitle, { size: 32, underline: { type: UnderlineType.SINGLE } })], { alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+
+        // Learning Target
+        docChildren.push(p([boldText("Learning Target:")], { spacing: { after: 100 } }));
+        docChildren.push(p([text(lasContent.learningTarget)], { indent: { left: 360 }, spacing: { after: 200 } }));
+        
+        // References
+        docChildren.push(p([boldText("References:")], { spacing: { after: 100 } }));
+        lasContent.references.split('\n').forEach(line => {
+            docChildren.push(p([text(line)], { indent: { left: 360 } }));
+        });
+        docChildren.push(p([]));
+
+        // Concept Notes
+        if (lasContent.conceptNotes && lasContent.conceptNotes.length > 0) {
+            lasContent.conceptNotes.forEach(note => {
+                docChildren.push(p([boldText(note.title, { underline: { type: UnderlineType.SINGLE } })], { spacing: { after: 100 } }));
+                note.content.split('\n').forEach(line => {
+                    docChildren.push(p([text(line)], { indent: { left: 360 }, spacing: { after: 50 } }));
+                });
+                docChildren.push(p([]));
+            });
+        }
+        
+        // Activities
+        if (lasContent.activities && lasContent.activities.length > 0) {
+            docChildren.push(p([boldText("ACTIVITIES", { size: 28 })], { alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+
+            lasContent.activities.forEach(activity => {
+                docChildren.push(p([boldText(activity.title, { size: 26, underline: { type: UnderlineType.SINGLE } })], { spacing: { after: 100 } }));
+                docChildren.push(p([text(activity.instructions, { italics: true })], { indent: { left: 360 }, spacing: { after: 200 } }));
+
+                if (activity.questions && activity.questions.length > 0) {
+                    activity.questions.forEach(q => {
+                        docChildren.push(p([text(q.questionText)], { numbering: { reference: "las-questions", level: 0 } }));
+                        if (q.options) {
+                            q.options.forEach(opt => {
+                                docChildren.push(p([text(opt)], { numbering: { reference: "las-questions", level: 1 } }));
+                            });
+                        }
+                    });
+                     docChildren.push(p([]));
+                }
+
+                if (activity.rubric && activity.rubric.length > 0) {
+                    docChildren.push(p([boldText("Rubric")], { spacing: { before: 200, after: 100 } }));
+                    const rubricHeader = new TableRow({
+                        children: [
+                            createCell([p([boldText("Criteria")])]),
+                            createCell([p([boldText("Points")], { alignment: AlignmentType.CENTER })]),
+                        ],
+                    });
+                    const rubricRows = activity.rubric.map(item => new TableRow({
+                        children: [
+                            createCell([p([text(item.criteria)])]),
+                            createCell([p([text(String(item.points))], { alignment: AlignmentType.CENTER })]),
+                        ],
+                    }));
+                    docChildren.push(new Table({
+                        rows: [rubricHeader, ...rubricRows],
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        columnWidths: [80, 20],
+                    }));
+                     docChildren.push(p([]));
+                }
+            });
+        }
+
+        const numberingConfig = {
+            config: [
+                {
+                    reference: "las-questions",
+                    levels: [
+                        { level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+                        { level: 1, format: LevelFormat.LOWER_LETTER, text: "%2.", style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+                    ],
+                },
+            ],
+        };
+
+        const doc = new Document({
+            numbering: numberingConfig,
+            sections: [{ 
+                properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, // 1 inch margins
+                children: docChildren
+            }]
+        });
+
+        const blob = await Packer.toBlob(doc);
+        this.downloadBlob(blob, `LAS_${lasContent.activityTitle.replace(/\s/g, '_')}.docx`);
     }
 }
 

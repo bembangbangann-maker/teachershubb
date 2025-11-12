@@ -369,3 +369,30 @@ export interface StudentProfileDocxData {
     recentAnecdotes: { date: string; observation: string }[];
     settings: SchoolSettings;
 }
+
+export interface LasConceptNotes {
+    title: string;
+    content: string; // Markdown supported content
+}
+
+export interface LasQuestion {
+    questionText: string;
+    type: 'Identification' | 'Essay' | 'Problem-solving' | 'Multiple Choice';
+    options?: string[];
+    answer?: string;
+}
+
+export interface LasActivity {
+    title: string;
+    instructions: string;
+    questions?: LasQuestion[];
+    rubric?: DlpRubricItem[];
+}
+
+export interface LearningActivitySheet {
+    activityTitle: string;
+    learningTarget: string;
+    references: string;
+    conceptNotes: LasConceptNotes[];
+    activities: LasActivity[];
+}

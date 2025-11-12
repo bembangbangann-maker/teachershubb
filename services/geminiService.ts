@@ -1,5 +1,5 @@
 import { Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { Student, Grade, Anecdote, AIAnalysisResult, ExtractedGrade, ExtractedStudentData, DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, DllContent, AttendanceStatus, DlpProcedure } from '../types';
+import { Student, Grade, Anecdote, AIAnalysisResult, ExtractedGrade, ExtractedStudentData, DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, DllContent, AttendanceStatus, DlpProcedure, LearningActivitySheet } from '../types';
 // Fix: Import toast to show error messages to the user.
 import { toast } from "react-hot-toast";
 
@@ -373,5 +373,43 @@ export const generateDllContent = async (details: { subject: string; gradeLevel:
         return parseJsonFromAiResponse<DllContent>(response.text);
     } catch (error) {
         throw handleGeminiError(error, 'generateDllContent');
+    }
+};
+
+const lasQuestionSchema = { type: Type.OBJECT, properties: { questionText: { type: Type.STRING }, type: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING } }, required: ["questionText", "type"] };
+const lasActivitySchema = { type: Type.OBJECT, properties: { title: { type: Type.STRING }, instructions: { type: Type.STRING }, questions: { type: Type.ARRAY, items: lasQuestionSchema }, rubric: { type: Type.ARRAY, items: dlpRubricItemSchema } }, required: ["title", "instructions"] };
+const lasContentSchema = { type: Type.OBJECT, properties: { activityTitle: { type: Type.STRING }, learningTarget: { type: Type.STRING }, references: { type: Type.STRING }, conceptNotes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, content: { type: Type.STRING } }, required: ["title", "content"] } }, activities: { type: Type.ARRAY, items: lasActivitySchema } }, required: ["activityTitle", "learningTarget", "references", "conceptNotes", "activities"] };
+
+export const generateLearningActivitySheet = async (details: { gradeLevel: string, subject: string, learningCompetency: string, lessonObjective: string, activityType: string, language: 'English' | 'Filipino' }): Promise<LearningActivitySheet> => {
+    const model = "gemini-2.5-pro";
+    const { gradeLevel, subject, language, learningCompetency, lessonObjective, activityType } = details;
+    const prompt = `You are an expert Filipino educator creating a DLP-Style Learning Activity Sheet (LAS). Your task is to generate a complete LAS based on the user's request. **Crucially, you must integrate a touch of Philippine culture.** This could be through examples using Filipino names, scenarios set in the Philippines, references to local literature (like Florante at Laura or Noli Me Tángere if relevant), history, or traditions. The content must be appropriate for the specified grade level.
+
+    **User Request:**
+    - **Grade Level:** ${gradeLevel}
+    - **Subject:** ${subject}
+    - **Language:** ${language}
+    - **Learning Competency:** "${learningCompetency}"
+    - **Lesson Objective(s):** "${lessonObjective}"
+    - **Type of Activity to focus on:** ${activityType}
+
+    **Instructions:**
+    1.  Create a clear and concise \`activityTitle\` related to the competency.
+    2.  Formulate a student-friendly \`learningTarget\` based on the objectives.
+    3.  List relevant \`references\` (e.g., specific DepEd modules, credible websites).
+    4.  Provide 1-2 \`conceptNotes\` sections. These should be brief, direct-to-the-point explanations of the core concepts, written in simple language suitable for the grade level. Use examples that reflect Philippine culture.
+    5.  Generate 2-3 \`activities\`. These activities should build on each other, moving from simple to more complex tasks. At least one activity should align with the requested '${activityType}'. For activities with questions, provide a mix of types. For performance tasks, suggest a rubric.
+
+    Generate the output as a single, valid JSON object that strictly adheres to the provided schema. Do not include any extra text or markdown formatting outside of the JSON structure.`;
+
+    try {
+        const response = await callApiProxy({
+            model, contents: prompt,
+            config: { responseMimeType: "application/json", responseSchema: lasContentSchema, safetySettings },
+            systemInstruction: efficientGenerationSystemInstruction,
+        });
+        return parseJsonFromAiResponse<LearningActivitySheet>(response.text);
+    } catch (error) {
+        throw handleGeminiError(error, 'generateLearningActivitySheet');
     }
 };

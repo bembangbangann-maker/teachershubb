@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAppContext } from '../contexts/AppContext';
-import { generateDlpContent, generateQuizContent, generateRubricForActivity, generateDllContent } from '../services/geminiService';
-import { DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, GeneratedQuizSection, DllContent, DlpProcedure } from '../types';
+import { generateDlpContent, generateQuizContent, generateRubricForActivity, generateDllContent, generateLearningActivitySheet } from '../services/geminiService';
+import { DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, GeneratedQuizSection, DllContent, DlpProcedure, LearningActivitySheet } from '../types';
 import Header from './Header';
-import { SparklesIcon, DownloadIcon } from './icons';
+import { SparklesIcon, DownloadIcon, ClipboardCheckIcon } from './icons';
 import { docxService } from '../services/docxService';
 
-const TabButton: React.FC<{ label: string, isActive: boolean, onClick: () => void }> = ({ label, isActive, onClick }) => (
-    <button onClick={onClick} className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${isActive ? 'border-primary text-primary' : 'border-transparent text-base-content/70 hover:text-base-content'}`}>
-        {label}
+const TabButton: React.FC<{ label: string, icon: React.ReactNode, isActive: boolean, onClick: () => void }> = ({ label, icon, isActive, onClick }) => (
+    <button onClick={onClick} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${isActive ? 'border-primary text-primary' : 'border-transparent text-base-content/70 hover:text-base-content'}`}>
+        {icon} {label}
     </button>
 );
 
@@ -28,6 +28,8 @@ const TextAreaField: React.FC<{ id: string, label: string, value: string, onChan
 );
 
 const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const jhsGradeLevels = ['7', '8', '9', '10'];
+
 const subjectAreas = {
   "Elementary (K-6)": ["Kindergarten (Domains)", "Mother Tongue", "Filipino", "English", "Mathematics", "Science", "Araling Panlipunan (AP)", "Edukasyon sa Pagpapakatao (EsP)", "Music", "Arts", "Physical Education (PE)", "Health", "Edukasyong Pantahanan at Pangkabuhayan (EPP)", "Technology and Livelihood Education (TLE)"],
   "Junior High School (Grades 7-10)": ["Filipino", "English", "Mathematics", "Science", "Araling Panlipunan (AP)", "Edukasyon sa Pagpapakatao (EsP)", "Technology and Livelihood Education (TLE)", "Music", "Arts", "Physical Education (PE)", "Health"],
@@ -35,10 +37,11 @@ const subjectAreas = {
   "Senior High School - Applied (Grades 11-12)": ["Empowerment Technologies", "English for Academic and Professional Purposes", "Entrepreneurship", "Filipino sa Piling Larang", "Practical Research 1", "Practical Research 2"]
 };
 
+type ActiveTab = 'dlp' | 'dll' | 'quiz' | 'las';
 
 const LessonPlanners: React.FC = () => {
     const { settings } = useAppContext();
-    const [activeTab, setActiveTab] = useState<'dlp' | 'quiz' | 'dll'>('dlp');
+    const [activeTab, setActiveTab] = useState<ActiveTab>('dlp');
     const [isLoading, setIsLoading] = useState(false);
     
     // DLP State
@@ -95,27 +98,40 @@ const LessonPlanners: React.FC = () => {
     });
     const [dllContent, setDllContent] = useState<DllContent | null>(null);
 
+    // LAS State
+    const [lasForm, setLasForm] = useState({
+        subject: 'Filipino',
+        gradeLevel: '7',
+        learningCompetency: '',
+        lessonObjective: '',
+        activityType: 'Guided Practice',
+        language: 'Filipino',
+    });
+    const [lasContent, setLasContent] = useState<LearningActivitySheet | null>(null);
+
 
     // Persist form state to localStorage
     useEffect(() => {
         const savedState = localStorage.getItem('lessonPlannersState');
         if (savedState) {
-            const { dlpForm: savedDlp, dllForm: savedDll, quizForm: savedQuiz, activeTab: savedTab, dlpContent: savedDlpContent, dllContent: savedDllContent, quizContent: savedQuizContent, teacherPosition: savedTeacherPosition } = JSON.parse(savedState);
+            const { dlpForm: savedDlp, dllForm: savedDll, quizForm: savedQuiz, lasForm: savedLas, activeTab: savedTab, dlpContent: savedDlpContent, dllContent: savedDllContent, quizContent: savedQuizContent, lasContent: savedLasContent, teacherPosition: savedTeacherPosition } = JSON.parse(savedState);
             if (savedDlp) setDlpForm(prev => ({...prev, ...savedDlp}));
             if (savedDll) setDllForm(prev => ({...prev, ...savedDll}));
             if (savedQuiz) setQuizForm(prev => ({...prev, ...savedQuiz}));
+            if (savedLas) setLasForm(prev => ({...prev, ...savedLas}));
             if (savedTab) setActiveTab(savedTab);
             if (savedDlpContent) setDlpContent(savedDlpContent);
             if (savedDllContent) setDllContent(savedDllContent);
             if (savedQuizContent) setQuizContent(savedQuizContent);
+            if (savedLasContent) setLasContent(savedLasContent);
             if (savedTeacherPosition) setTeacherPosition(savedTeacherPosition);
         }
     }, []);
 
     useEffect(() => {
-        const stateToSave = { dlpForm, dllForm, quizForm, activeTab, dlpContent, dllContent, quizContent, teacherPosition };
+        const stateToSave = { dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition };
         localStorage.setItem('lessonPlannersState', JSON.stringify(stateToSave));
-    }, [dlpForm, dllForm, quizForm, activeTab, dlpContent, dllContent, quizContent, teacherPosition]);
+    }, [dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition]);
 
 
     useEffect(() => {
@@ -150,6 +166,11 @@ const LessonPlanners: React.FC = () => {
     const handleDllFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
         setDllForm(prev => ({...prev, [id]: value}));
+    };
+
+    const handleLasFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { id, value } = e.target;
+        setLasForm(prev => ({ ...prev, [id]: value }));
     };
 
     const handleQuizFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -268,6 +289,30 @@ const LessonPlanners: React.FC = () => {
         }
     };
 
+    const generateLAS = async () => {
+        if (!lasForm.subject.trim() || !lasForm.learningCompetency.trim() || !lasForm.lessonObjective.trim()) {
+            toast.error("Please fill in the Subject, Learning Competency, and Lesson Objective.");
+            return;
+        }
+        setIsLoading(true);
+        setLasContent(null);
+        const toastId = toast.loading('Generating Learning Activity Sheet...');
+        try {
+            const content = await generateLearningActivitySheet({
+                ...lasForm,
+                language: lasForm.language as 'English' | 'Filipino',
+            });
+            setLasContent(content);
+            toast.success('Learning Sheet generated successfully!', { id: toastId });
+        } catch (error) {
+            let message = "An unknown error occurred.";
+            if (error instanceof Error) message = error.message;
+            toast.error(message, { id: toastId });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const generateQuiz = async () => {
         if (!quizForm.quizTopic.trim() || quizForm.quizTypes.length === 0) {
             toast.error('Please provide a topic and select at least one quiz format.');
@@ -332,6 +377,30 @@ const LessonPlanners: React.FC = () => {
             };
             await docxService.generateDllDocx(dllExportData, dllContent, settings);
             toast.success('Weekly Plan downloaded successfully!', { id: toastId });
+        } catch (error) {
+            let message = "An unknown error occurred.";
+            if (error instanceof Error) message = error.message;
+            toast.error(message, { id: toastId });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+     const handleDownloadLasDocx = async () => {
+        if (!lasContent) {
+            toast.error("No Learning Sheet content to download.");
+            return;
+        }
+        setIsLoading(true);
+        const toastId = toast.loading('Generating Word document...');
+        try {
+            await docxService.generateLasDocx({
+                ...lasForm,
+                schoolYear: settings.schoolYear,
+                schoolName: settings.schoolName,
+                teacherName: settings.teacherName,
+            }, lasContent);
+            toast.success('Learning Sheet downloaded successfully!', { id: toastId });
         } catch (error) {
             let message = "An unknown error occurred.";
             if (error instanceof Error) message = error.message;
@@ -485,9 +554,10 @@ const LessonPlanners: React.FC = () => {
             <Header title="Lesson Planners" />
             <div className="p-4 md:p-8">
                  <div className="flex border-b border-base-300 mb-6">
-                    <TabButton label="DLP Generator" isActive={activeTab === 'dlp'} onClick={() => setActiveTab('dlp')} />
-                    <TabButton label="Weekly Plan Generator" isActive={activeTab === 'dll'} onClick={() => setActiveTab('dll')} />
-                    <TabButton label="Quiz Generator" isActive={activeTab === 'quiz'} onClick={() => setActiveTab('quiz')} />
+                    <TabButton label="DLP Generator" icon={<SparklesIcon className="w-4 h-4" />} isActive={activeTab === 'dlp'} onClick={() => setActiveTab('dlp')} />
+                    <TabButton label="Weekly Plan Generator" icon={<SparklesIcon className="w-4 h-4" />} isActive={activeTab === 'dll'} onClick={() => setActiveTab('dll')} />
+                    <TabButton label="Quiz Generator" icon={<SparklesIcon className="w-4 h-4" />} isActive={activeTab === 'quiz'} onClick={() => setActiveTab('quiz')} />
+                    <TabButton label="Learning Sheets" icon={<ClipboardCheckIcon className="w-4 h-4" />} isActive={activeTab === 'las'} onClick={() => setActiveTab('las')} />
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Forms */}
@@ -610,6 +680,44 @@ const LessonPlanners: React.FC = () => {
                                 </div>
                                 <div className="pt-4"><button onClick={generateDLL} disabled={isLoading} className="w-full flex items-center justify-center bg-primary hover:bg-primary-focus text-white font-bold py-3 px-4 rounded-lg"><SparklesIcon className="w-5 h-5 mr-2" />{isLoading ? 'Generating...' : 'Generate Weekly Plan'}</button></div>
                             </div>
+                        ) : activeTab === 'las' ? (
+                            <div className="space-y-4">
+                                <h3 className="text-xl font-bold text-base-content mb-4 flex items-center"><ClipboardCheckIcon className="w-6 h-6 mr-2 text-primary" />DLP-Style Learning Activity Sheet</h3>
+                                <div>
+                                    <label htmlFor="language" className="block text-sm font-medium text-base-content mb-1">Language<span className="text-error">*</span></label>
+                                    <select id="language" value={lasForm.language} onChange={handleLasFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                        <option value="Filipino">Filipino</option>
+                                        <option value="English">English</option>
+                                    </select>
+                                </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="gradeLevel" className="block text-sm font-medium text-base-content mb-1">Grade Level<span className="text-error">*</span></label>
+                                        <select id="gradeLevel" value={lasForm.gradeLevel} onChange={handleLasFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                            {jhsGradeLevels.map(grade => ( <option key={grade} value={grade}>{`Grade ${grade}`}</option> ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="subject" className="block text-sm font-medium text-base-content mb-1">Subject<span className="text-error">*</span></label>
+                                        <select id="subject" value={lasForm.subject} onChange={handleLasFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                            {subjectAreas["Junior High School (Grades 7-10)"].map(subject => (<option key={subject} value={subject}>{subject}</option>))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <TextAreaField id="learningCompetency" label="Learning Competency" value={lasForm.learningCompetency} onChange={handleLasFormChange} required placeholder="e.g., Natutukoy at naipaliliwanag ang mensahe ng napanood na trailer o film clip" />
+                                <TextAreaField id="lessonObjective" label="Lesson Objective(s)" value={lasForm.lessonObjective} onChange={handleLasFormChange} required placeholder="e.g., Makasulat ng isang maikling pagsusuri ng isang pelikulang Pilipino." />
+                                <div>
+                                    <label htmlFor="activityType" className="block text-sm font-medium text-base-content mb-1">Activity Focus<span className="text-error">*</span></label>
+                                    <select id="activityType" value={lasForm.activityType} onChange={handleLasFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                        <option>Concept Notes & Examples</option>
+                                        <option>Guided Practice</option>
+                                        <option>Independent Practice</option>
+                                        <option>Performance Task</option>
+                                        <option>Enrichment Activity</option>
+                                    </select>
+                                </div>
+                                <div className="pt-4"><button onClick={generateLAS} disabled={isLoading} className="w-full flex items-center justify-center bg-primary hover:bg-primary-focus text-white font-bold py-3 px-4 rounded-lg"><SparklesIcon className="w-5 h-5 mr-2" />{isLoading ? 'Generating...' : 'Generate Learning Sheet'}</button></div>
+                            </div>
                         ) : (
                              <form onSubmit={(e) => { e.preventDefault(); generateQuiz(); }} className="space-y-4">
                                 <h3 className="text-xl font-bold text-base-content mb-4 flex items-center"><SparklesIcon className="w-6 h-6 mr-2 text-primary" />Quiz Generator</h3>
@@ -646,6 +754,7 @@ const LessonPlanners: React.FC = () => {
                         {!isLoading && activeTab === 'dlp' && !dlpContent && (<div className="flex-grow flex items-center justify-center text-center p-16"><div><h3 className="text-2xl font-bold">DLP Preview</h3><p className="mt-2">Your generated Daily Lesson Plan will appear here.</p></div></div>)}
                         {!isLoading && activeTab === 'dll' && !dllContent && (<div className="flex-grow flex items-center justify-center text-center p-16"><div><h3 className="text-2xl font-bold">Weekly Plan Preview</h3><p className="mt-2">Your generated Weekly Plan will appear here.</p></div></div>)}
                         {!isLoading && activeTab === 'quiz' && !quizContent && (<div className="flex-grow flex items-center justify-center text-center p-16"><div><h3 className="text-2xl font-bold">Quiz Preview</h3><p className="mt-2">Your generated quiz will appear here.</p></div></div>)}
+                        {!isLoading && activeTab === 'las' && !lasContent && (<div className="flex-grow flex items-center justify-center text-center p-16"><div><h3 className="text-2xl font-bold">Learning Sheet Preview</h3><p className="mt-2">Your generated activity sheet will appear here.</p></div></div>)}
                         
                         {!isLoading && dlpContent && activeTab === 'dlp' && (
                             <>
@@ -730,6 +839,54 @@ const LessonPlanners: React.FC = () => {
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
+                            </>
+                        )}
+                        
+                        {!isLoading && lasContent && activeTab === 'las' && (
+                             <>
+                                <div className="p-4 border-b border-base-300 flex justify-between items-center flex-shrink-0">
+                                    <h3 className="text-xl font-bold">{lasContent.activityTitle}</h3>
+                                    <button onClick={handleDownloadLasDocx} disabled={isLoading} className="flex items-center bg-secondary hover:bg-secondary-focus text-white font-bold py-2 px-4 rounded-lg"><DownloadIcon className="w-5 h-5 mr-2"/>Download Word File</button>
+                                </div>
+                                <div className="p-6 overflow-y-auto flex-grow min-h-0 prose prose-invert max-w-none prose-headings:text-primary prose-strong:text-base-content prose-table:bg-base-100 prose-thead:bg-base-300/50 prose-th:p-2 prose-td:p-2 prose-li:my-1">
+                                    <h4>Learning Target</h4>
+                                    <p>{lasContent.learningTarget}</p>
+                                    
+                                    <h4>References</h4>
+                                    <p className="whitespace-pre-wrap text-sm">{lasContent.references}</p>
+
+                                    {lasContent.conceptNotes.map((note, index) => (
+                                        <div key={index} className="bg-base-100 p-4 rounded-md my-4">
+                                            <h4>{note.title}</h4>
+                                            <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{__html: note.content}}></div>
+                                        </div>
+                                    ))}
+                                    
+                                    {lasContent.activities.map((activity, index) => (
+                                        <div key={index} className="mt-6">
+                                            <h3>{activity.title}</h3>
+                                            <p className="italic">{activity.instructions}</p>
+                                            {activity.questions && (
+                                                <ol className="list-decimal list-inside space-y-4 mt-4">
+                                                    {activity.questions.map((q, qIndex) => (
+                                                        <li key={qIndex}>
+                                                            <p>{q.questionText}</p>
+                                                            {q.options && <ul className="list-none pl-6 text-sm"> {q.options.map((opt, oi) => <li key={oi}>{String.fromCharCode(65 + oi)}. {opt}</li>)}</ul>}
+                                                        </li>
+                                                    ))}
+                                                </ol>
+                                            )}
+                                             {activity.rubric && (
+                                                <div className="mt-4 overflow-x-auto">
+                                                    <h5 className="font-bold">Rubric</h5>
+                                                    <table><thead><tr><th>Criteria</th><th>Points</th></tr></thead>
+                                                        <tbody>{activity.rubric.map(r => <tr key={r.criteria}><td>{r.criteria}</td><td>{r.points}</td></tr>)}</tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </>
                         )}
