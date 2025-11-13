@@ -1,5 +1,5 @@
 import { Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { Student, Grade, Anecdote, AIAnalysisResult, ExtractedGrade, ExtractedStudentData, DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, DllContent, AttendanceStatus, DlpProcedure, LearningActivitySheet } from '../types';
+import { Student, Grade, Anecdote, AIAnalysisResult, ExtractedGrade, ExtractedStudentData, DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, DllContent, AttendanceStatus, DlpProcedure, LearningActivitySheet, CotLessonPlan, CotProcedureStep } from '../types';
 // Fix: Import toast to show error messages to the user.
 import { toast } from "react-hot-toast";
 
@@ -303,7 +303,29 @@ const dlpContentSchema = { type: Type.OBJECT, properties: { contentStandard: { t
 export const generateDlpContent = async (details: { gradeLevel: string; learningCompetency: string; lessonObjective: string; previousLesson: string; selectedQuarter: string; subject: string; teacherPosition: 'Beginning' | 'Proficient' | 'Highly Proficient' | 'Distinguished'; language: 'English' | 'Filipino'; }): Promise<DlpContent> => {
     const model = "gemini-2.5-pro";
     const { gradeLevel, language, subject, learningCompetency, lessonObjective, teacherPosition } = details;
-    const prompt = `Generate a complete DepEd-aligned Daily Lesson Plan in ${language} for a ${gradeLevel} ${subject} class. Learning competency: "${learningCompetency}". Lesson Objective: "${lessonObjective}". Base PPST COIs on DepEd Order No. 14, s. 2023 for a ${teacherPosition} teacher. Structure the output as a valid JSON object.`;
+    const prompt = `Generate a complete and detailed DepEd-aligned Daily Lesson Plan (DLP) in ${language} for a ${gradeLevel} ${subject} class.
+
+**Lesson Details:**
+- Learning Competency: "${learningCompetency}"
+- Lesson Objective: "${lessonObjective}"
+- Teacher's Career Stage for PPST alignment: ${teacherPosition}
+
+**Strict Instructions:**
+1.  **Procedure Structure:** The 'procedures' array must contain objects with titles that strictly follow this DepEd structure.
+    - Reviewing previous lesson or presenting the new lesson
+    - Establishing a purpose for the lesson
+    - Presenting examples/instances of the new lesson
+    - Discussing new concepts and practicing new skills #1 (LOTS)
+    - Discussing new concepts and practicing new skills #2 (HOTS)
+    - Developing mastery (Leads to Formative Assessment)
+    - Finding practical applications of concepts and skills in daily living
+    - Making generalizations and abstractions about the lesson
+    - Evaluating learning
+2.  **Complete Content:** You MUST provide detailed, non-placeholder content for EVERY procedure step. Ensure each step includes specific Teacher's Activities, Learner's Activities, and instructional materials. Explicitly label sections that focus on Lower-Order Thinking Skills (LOTS) and Higher-Order Thinking Skills (HOTS). Do not use placeholders.
+3.  **PPST Indicators:** For each procedure, provide a relevant PPST COI based on DepEd Order No. 14, s. 2023 for a ${teacherPosition} teacher.
+4.  **Evaluation:** The 'evaluationQuestions' array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer.
+
+Generate the output as a single, valid JSON object that strictly adheres to the provided schema. Do not include any extra text or markdown formatting outside of the JSON structure.`;
 
     try {
         const response = await callApiProxy({
@@ -362,7 +384,18 @@ const dllContentSchema = { type: Type.OBJECT, properties: { contentStandard: { t
 export const generateDllContent = async (details: { subject: string; gradeLevel: string; weeklyTopic?: string; contentStandard?: string; performanceStandard?: string; teachingDates: string; quarter: string; language: 'English' | 'Filipino'; }): Promise<DllContent> => {
     const model = "gemini-2.5-pro";
     const { subject, gradeLevel, weeklyTopic, contentStandard, performanceStandard, teachingDates, quarter, language } = details;
-    const prompt = `Generate a comprehensive Daily Lesson Log (DLL) in ${language} for a full 5-day week for a ${gradeLevel} ${subject} class, Quarter ${quarter}, for ${teachingDates}. Topic: "${weeklyTopic || 'AI to generate based on curriculum'}". Content Standard: "${contentStandard || 'AI to generate'}". Performance Standard: "${performanceStandard || 'AI to generate'}". Strictly follow the DepEd DLL format and provided JSON schema.`;
+    const prompt = `Generate a complete and highly detailed Daily Lesson Log (DLL) in ${language} for a full 5-day week for a ${gradeLevel} ${subject} class, Quarter ${quarter}, for ${teachingDates}.
+
+**Lesson Context:**
+- Topic: "${weeklyTopic || 'AI to generate based on curriculum'}"
+- Content Standard: "${contentStandard || 'AI to generate'}"
+- Performance Standard: "${performanceStandard || 'AI to generate'}"
+
+**CRITICAL INSTRUCTIONS:**
+1.  **COMPLETE ALL SECTIONS:** You MUST provide detailed, non-placeholder content for EVERY field in the JSON schema.
+2.  **COMPLETE ALL DAYS:** Fill out meaningful and distinct content for ALL five days (Monday through Friday) for every procedure and resource section. Do not use phrases like "to be discussed," "continuation," or "same as yesterday." Each day must have its own specific, fully-described activities.
+3.  **DETAIL-ORIENTED PROCEDURES:** Each procedure for each day must contain specific teacher activities, student activities, questions, and expected outcomes. The content should be practical and usable in a real classroom.
+4.  **STRICT SCHEMA ADHERENCE:** Strictly follow the DepEd DLL format and the provided JSON schema. Do not add any extra text outside the JSON structure.`;
 
     try {
         const response = await callApiProxy({
@@ -411,5 +444,76 @@ export const generateLearningActivitySheet = async (details: { gradeLevel: strin
         return parseJsonFromAiResponse<LearningActivitySheet>(response.text);
     } catch (error) {
         throw handleGeminiError(error, 'generateLearningActivitySheet');
+    }
+};
+
+
+const cotProcedureStepSchema = {
+    type: Type.OBJECT,
+    properties: {
+        procedure: { type: Type.STRING, description: "The name of the lesson part, e.g., 'A. Reviewing previous lesson'." },
+        teacherActivity: { type: Type.STRING, description: "Detailed teacher's activities and scripts for this step." },
+        studentActivity: { type: Type.STRING, description: "Expected student activities and responses." },
+        indicator: { type: Type.STRING, description: "The specific PPST indicator code demonstrated in this step (e.g., '1.1.2')." },
+        observableEvidence: { type: Type.STRING, description: "Specific, observable actions or outputs that an observer should look for to verify the indicator." }
+    },
+    required: ["procedure", "teacherActivity", "studentActivity", "indicator", "observableEvidence"]
+};
+
+const cotLessonPlanSchema = {
+    type: Type.OBJECT,
+    properties: {
+        lessonTitle: { type: Type.STRING },
+        learningObjectives: { type: Type.ARRAY, items: { type: Type.STRING } },
+        learningMaterials: { type: Type.ARRAY, items: { type: Type.STRING } },
+        procedures: { type: Type.ARRAY, items: cotProcedureStepSchema }
+    },
+    required: ["lessonTitle", "learningObjectives", "learningMaterials", "procedures"]
+};
+
+export const generateCotLessonPlan = async (details: {
+    gradeLevel: string;
+    subject: string;
+    topic: string;
+    objectives: string;
+    indicators: string[];
+}): Promise<CotLessonPlan> => {
+    const model = "gemini-2.5-pro";
+    const { gradeLevel, subject, topic, objectives, indicators } = details;
+
+    const prompt = `You are an expert instructional coach helping a teacher prepare for a Classroom Observation Test (COT). Your task is to create a highly detailed and strategic semi-detailed lesson plan that masterfully showcases specific PPST indicators.
+
+**Lesson Details:**
+- Grade Level: ${gradeLevel}
+- Subject: ${subject}
+- Topic: "${topic}"
+- Lesson Objectives: "${objectives}"
+
+**Target PPST Indicators to Demonstrate:**
+- ${indicators.join('\n- ')}
+
+**Strict Instructions:**
+1.  **Strategic Integration:** Design each part of the lesson procedure to explicitly and clearly demonstrate one of the target PPST indicators. A single procedure step should focus on demonstrating ONE indicator.
+2.  **Procedure Structure:** Follow the standard DepEd lesson plan procedure (e.g., Review, Motivation, Presentation, Discussion, Application, Generalization, Evaluation).
+3.  **Detailed Activities:** For each procedure step, provide a detailed description of the 'teacherActivity' (including suggested scripts or questions) and the 'studentActivity'.
+4.  **Explicit Mapping:** In the 'indicator' field for each step, state the exact PPST indicator code being demonstrated.
+5.  **Observable Evidence:** The 'observableEvidence' field is critical. For each step, describe the specific, concrete evidence an observer should look for. This should describe what students are doing, saying, or producing as a result of the teacher's actions. Example: "Students are working in groups, actively discussing the material, and using the provided graphic organizer to record their ideas."
+
+Generate the output as a single, valid JSON object that strictly adheres to the provided schema. Do not add any introductory text.`;
+
+    try {
+        const response = await callApiProxy({
+            model,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: cotLessonPlanSchema,
+                safetySettings
+            },
+            systemInstruction: efficientGenerationSystemInstruction
+        });
+        return parseJsonFromAiResponse<CotLessonPlan>(response.text);
+    } catch (error) {
+        throw handleGeminiError(error, 'generateCotLessonPlan');
     }
 };

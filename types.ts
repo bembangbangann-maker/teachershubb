@@ -396,3 +396,18 @@ export interface LearningActivitySheet {
     conceptNotes: LasConceptNotes[];
     activities: LasActivity[];
 }
+// FIX: Add missing type definitions for COT Lesson Plan feature.
+export interface CotProcedureStep {
+    procedure: string;
+    teacherActivity: string;
+    studentActivity: string;
+    indicator: string;
+    observableEvidence: string;
+}
+
+export interface CotLessonPlan {
+    lessonTitle: string;
+    learningObjectives: string[];
+    learningMaterials: string[];
+    procedures: CotProcedureStep[];
+}
