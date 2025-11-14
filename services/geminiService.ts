@@ -307,7 +307,7 @@ export const generateDlpContent = async (details: { gradeLevel: string; learning
     let procedureInstruction = '';
     switch (dlpFormat) {
         case '4As':
-            procedureInstruction = `The 'procedures' array must follow the 4A's format. The titles must be exactly: "Activity", "Analysis", "Abstraction", and "Application". You must also include a final procedure with the title "Evaluation".`;
+            procedureInstruction = `The 'procedures' array must follow the 4A's format. The titles must be exactly: "Activity", "Analysis", "Abstraction", and "Application". You must also include a final procedure with the title "Evaluating learning".`;
             break;
         case '5Es':
             procedureInstruction = `The 'procedures' array must follow the 5E's format. The titles must be exactly: "Engage", "Explore", "Explain", "Elaborate", and "Evaluate".`;
@@ -335,7 +335,7 @@ export const generateDlpContent = async (details: { gradeLevel: string; learning
 
 **CRITICAL INSTRUCTIONS:**
 1.  **Procedure Structure:** ${procedureInstruction}
-2.  **Evaluation Section:** The "Evaluating learning" procedure (or the "Evaluation" procedure in 4A's/5E's) MUST be followed by the 'evaluationQuestions' array in the JSON. This array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer.
+2.  **Evaluation Section:** The 'evaluationQuestions' array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer. The final procedure step MUST be about administering this evaluation.
 3.  **Rich Content Formatting:** You MUST provide detailed, non-placeholder content for EVERY procedure step.
     - Use Markdown for emphasis: use **bold** and *italics* for important keywords. Use ALL CAPS for very important headings or terms.
     - Structure discussions clearly. Include specific Teacher's Activities and Learner's Activities. When asking questions, use headings like "**LOTS Questions:**" or "**HOTS Questions:**" where appropriate.
@@ -398,21 +398,47 @@ const dllDailyEntrySchema = { type: Type.OBJECT, properties: { monday: { type: T
 const dllProcedureSchema = { type: Type.OBJECT, properties: { procedure: { type: Type.STRING }, ...dllDailyEntrySchema.properties }, required: ["procedure", "monday", "tuesday", "wednesday", "thursday", "friday"] };
 const dllContentSchema = { type: Type.OBJECT, properties: { contentStandard: { type: Type.STRING }, performanceStandard: { type: Type.STRING }, learningCompetencies: { ...dllDailyEntrySchema }, content: { type: Type.STRING }, learningResources: { type: Type.OBJECT, properties: { teacherGuidePages: dllDailyEntrySchema, learnerMaterialsPages: dllDailyEntrySchema, textbookPages: dllDailyEntrySchema, additionalMaterials: dllDailyEntrySchema, otherResources: dllDailyEntrySchema }, required: ["teacherGuidePages", "learnerMaterialsPages", "textbookPages", "additionalMaterials", "otherResources"] }, procedures: { type: Type.ARRAY, items: dllProcedureSchema }, remarks: { type: Type.STRING }, reflection: { type: Type.ARRAY, items: dllProcedureSchema } }, required: ["contentStandard", "performanceStandard", "learningCompetencies", "content", "learningResources", "procedures", "remarks", "reflection"] };
 
-export const generateDllContent = async (details: { subject: string; gradeLevel: string; weeklyTopic?: string; contentStandard?: string; performanceStandard?: string; teachingDates: string; quarter: string; language: 'English' | 'Filipino'; }): Promise<DllContent> => {
+export const generateDllContent = async (details: { subject: string; gradeLevel: string; weeklyTopic?: string; contentStandard?: string; performanceStandard?: string; teachingDates: string; quarter: string; language: 'English' | 'Filipino'; dllFormat: string; }): Promise<DllContent> => {
     const model = "gemini-2.5-pro";
-    const { subject, gradeLevel, weeklyTopic, contentStandard, performanceStandard, teachingDates, quarter, language } = details;
+    const { subject, gradeLevel, weeklyTopic, contentStandard, performanceStandard, teachingDates, quarter, language, dllFormat } = details;
+    
+    let procedureInstruction = '';
+    if (dllFormat === 'MATATAG') {
+        procedureInstruction = `The 'procedures' array must STRICTLY follow the MATATAG DLL format's 4 parts. The 'procedure' field for each object in the array MUST be one of the following, in this exact order and using both English and Filipino terms:
+1.  **Introduction (Panimula):** This part should include activities that introduce the lesson, such as reviewing previous concepts and presenting the new lesson or motivation.
+2.  **Development (Pagpapaunlad):** This part should focus on the main lesson. Include activities and an analysis of those activities to process the students' learning.
+3.  **Engagement (Pakikipagpalihan):** This part is for deepening the lesson. Include an abstraction (discussion/lecture) and an application of the concepts learned.
+4.  **Assimilation (Paglalapat):** This part should wrap up the lesson. Include a brief evaluation or assessment, and suggest additional activities for remediation or enrichment.
+
+You MUST provide detailed, non-placeholder content for EVERY day (Monday to Friday) for EACH of these four procedure steps.`;
+    } else { // Standard DLL format
+        procedureInstruction = `The 'procedures' array must STRICTLY follow the standard DepEd DLL format. The 'procedure' field for each object in the array MUST be one of the following, in this exact order:
+A. Reviewing previous lesson or presenting the new lesson
+B. Establishing a purpose for the lesson
+C. Presenting examples/instances of the new lesson
+D. Discussing new concepts and practicing new skills #1
+E. Discussing new concepts and practicing new skills #2
+F. Developing mastery (Leads to Formative Assessment)
+G. Finding practical applications of concepts and skills in daily living
+H. Making generalizations and abstractions about the lesson
+I. Evaluating learning
+J. Additional activities for application or remediation`;
+    }
+
     const prompt = `Generate a complete and highly detailed Daily Lesson Log (DLL) in ${language} for a full 5-day week for a ${gradeLevel} ${subject} class, Quarter ${quarter}, for ${teachingDates}.
 
 **Lesson Context:**
 - Topic: "${weeklyTopic || 'AI to generate based on curriculum'}"
 - Content Standard: "${contentStandard || 'AI to generate'}"
 - Performance Standard: "${performanceStandard || 'AI to generate'}"
+- Format Style: ${dllFormat}
 
 **CRITICAL INSTRUCTIONS:**
-1.  **COMPLETE ALL SECTIONS:** You MUST provide detailed, non-placeholder content for EVERY field in the JSON schema.
-2.  **COMPLETE ALL DAYS:** Fill out meaningful and distinct content for ALL five days (Monday through Friday) for every procedure and resource section. Do not use phrases like "to be discussed," "continuation," or "same as yesterday." Each day must have its own specific, fully-described activities.
-3.  **DETAIL-ORIENTED PROCEDURES:** Each procedure for each day must contain specific teacher activities, student activities, questions, and expected outcomes. The content should be practical and usable in a real classroom.
-4.  **STRICT SCHEMA ADHERENCE:** Strictly follow the DepEd DLL format and the provided JSON schema. Do not add any extra text outside the JSON structure.`;
+1.  **PROCEDURE STRUCTURE:** ${procedureInstruction}
+2.  **COMPLETE ALL SECTIONS:** You MUST provide detailed, non-placeholder content for EVERY field in the JSON schema.
+3.  **COMPLETE ALL DAYS:** Fill out meaningful and distinct content for ALL five days (Monday through Friday) for every procedure and resource section. Do not use phrases like "to be discussed," "continuation," or "same as yesterday." Each day must have its own specific, fully-described activities.
+4.  **DETAIL-ORIENTED PROCEDURES:** Each procedure for each day must contain specific teacher activities, student activities, questions, and expected outcomes. The content should be practical and usable in a real classroom.
+5.  **STRICT SCHEMA ADHERENCE:** Strictly follow the provided JSON schema. Do not add any extra text outside the JSON structure.`;
 
     try {
         const response = await callApiProxy({

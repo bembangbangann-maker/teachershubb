@@ -81,6 +81,7 @@ const LessonPlanners: React.FC = () => {
     const [generatingRubricIndex, setGeneratingRubricIndex] = useState<number | null>(null);
 
     // DLL State
+    const [dllFormat, setDllFormat] = useState('Standard');
     const [dllForm, setDllForm] = useState({
         subject: 'English',
         gradeLevel: '10',
@@ -115,7 +116,7 @@ const LessonPlanners: React.FC = () => {
     useEffect(() => {
         const savedState = localStorage.getItem('lessonPlannersState');
         if (savedState) {
-            const { dlpForm: savedDlp, dllForm: savedDll, quizForm: savedQuiz, lasForm: savedLas, activeTab: savedTab, dlpContent: savedDlpContent, dllContent: savedDllContent, quizContent: savedQuizContent, lasContent: savedLasContent, teacherPosition: savedTeacherPosition } = JSON.parse(savedState);
+            const { dlpForm: savedDlp, dllForm: savedDll, quizForm: savedQuiz, lasForm: savedLas, activeTab: savedTab, dlpContent: savedDlpContent, dllContent: savedDllContent, quizContent: savedQuizContent, lasContent: savedLasContent, teacherPosition: savedTeacherPosition, dllFormat: savedDllFormat } = JSON.parse(savedState);
             if (savedDlp) setDlpForm(prev => ({...prev, ...savedDlp}));
             if (savedDll) setDllForm(prev => ({...prev, ...savedDll}));
             if (savedQuiz) setQuizForm(prev => ({...prev, ...savedQuiz}));
@@ -126,13 +127,14 @@ const LessonPlanners: React.FC = () => {
             if (savedQuizContent) setQuizContent(savedQuizContent);
             if (savedLasContent) setLasContent(savedLasContent);
             if (savedTeacherPosition) setTeacherPosition(savedTeacherPosition);
+            if (savedDllFormat) setDllFormat(savedDllFormat);
         }
     }, []);
 
     useEffect(() => {
-        const stateToSave = { dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition };
+        const stateToSave = { dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition, dllFormat };
         localStorage.setItem('lessonPlannersState', JSON.stringify(stateToSave));
-    }, [dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition]);
+    }, [dlpForm, dllForm, quizForm, lasForm, activeTab, dlpContent, dllContent, quizContent, lasContent, teacherPosition, dllFormat]);
 
 
     useEffect(() => {
@@ -279,6 +281,7 @@ const LessonPlanners: React.FC = () => {
             const content = await generateDllContent({
                 ...dllForm,
                 language: dllForm.language as 'English' | 'Filipino',
+                dllFormat: dllFormat,
             });
             setDllContent(content);
             toast.success('Weekly Plan generated successfully!', { id: toastId });
@@ -645,6 +648,13 @@ const LessonPlanners: React.FC = () => {
                                     </select>
                                 </div>
                                 <div>
+                                    <label htmlFor="dllFormat" className="block text-sm font-medium text-base-content mb-1">DLL Format<span className="text-error">*</span></label>
+                                    <select id="dllFormat" value={dllFormat} onChange={(e) => setDllFormat(e.target.value)} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                        <option value="Standard">Standard DLL Format</option>
+                                        <option value="MATATAG">MATATAG DLL Format</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label htmlFor="subject" className="block text-sm font-medium text-base-content mb-1">Subject<span className="text-error">*</span></label>
                                     <select id="subject" value={dllForm.subject} onChange={handleDllFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
                                         {Object.entries(subjectAreas).map(([group, subjects]) => (
@@ -840,7 +850,7 @@ const LessonPlanners: React.FC = () => {
                                                     </tr>
                                                 </>
                                                 <tr className="bg-base-300"><td className="p-2 border border-base-100 font-bold text-center" colSpan={6}>{dllHeaders.procedures}</td></tr>
-                                                {dllContent.procedures.map((p, i) => (<tr key={`proc-${i}`}><td className="p-2 border border-base-100 font-semibold">{p.procedure}</td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.monday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.tuesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.wednesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.thursday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.friday}</div></td></tr>))}
+                                                {dllContent.procedures.map((p, i) => (<tr key={`proc-${i}`}><td className="p-2 border border-base-100 font-semibold" dangerouslySetInnerHTML={{ __html: p.procedure.replace(/\n/g, '<br/>')}}></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.monday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.tuesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.wednesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.thursday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.friday}</div></td></tr>))}
                                                 <tr className="bg-base-100/50"><td className="p-2 border border-base-100 font-bold">{dllHeaders.remarks}</td><td className="p-2 border border-base-100" colSpan={5}>{dllContent.remarks}</td></tr>
                                                 <tr className="bg-base-300"><td className="p-2 border border-base-100 font-bold text-center" colSpan={6}>{dllHeaders.reflection}</td></tr>
                                                 {dllContent.reflection.map((p, i) => (<tr key={`refl-${i}`}><td className="p-2 border border-base-100 font-semibold">{p.procedure}</td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.monday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.tuesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.wednesday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.thursday}</div></td><td className="p-2 border border-base-100"><div className="whitespace-pre-wrap">{p.friday}</div></td></tr>))}
@@ -1016,7 +1026,7 @@ const LasPreview: React.FC<{ lasContent: LearningActivitySheet, settings: School
                                         </table>
                                     </div>
                                 )}
-                            </div>
+                             </div>
                         ))}
                     </div>
                 </div>
