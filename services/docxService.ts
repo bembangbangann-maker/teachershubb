@@ -1524,116 +1524,105 @@ class DocxService {
         this.downloadBlob(blob, `Weekly_Plan_${dllForm.subject}_${dllForm.gradeLevel}.docx`);
     }
 
-    // Fix: Add missing generateLasDocx method
-    public async generateLasDocx(details: {
-        schoolYear: string;
-        schoolName: string;
-        teacherName: string;
-        subject: string;
-        gradeLevel: string;
-    }, lasContent: LearningActivitySheet): Promise<void> {
-        const font = "Times New Roman";
-        const text = (txt: string, options: Omit<IRunOptions, 'children'> = {}) => new TextRun({ text: txt, font, size: 24, ...options }); // 12pt
+    public async generateLasDocx(details: { schoolYear: string; subject: string; gradeLevel: string; }, lasContent: LearningActivitySheet, settings: SchoolSettings): Promise<void> {
+        const docChildren: (Paragraph | Table)[] = [];
+        const font = "Arial";
+        const text = (txt: string, options: Omit<IRunOptions, 'children'> = {}) => new TextRun({ text: txt, font, size: 22, ...options });
         const boldText = (txt: string, options: Omit<IRunOptions, 'children'> = {}) => text(txt, { bold: true, ...options });
         const p = (children: (TextRun | ImageRun)[], options: IParagraphOptions = {}) => new Paragraph({ children, ...options });
+        const checkBox = () => new TextRun({ text: "☐", font: "Wingdings", size: 22 });
 
-        const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: "000000" };
-        const createCell = (children: (Paragraph|Table)[], options: any = {}) => new TableCell({ children, borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder }, verticalAlign: VerticalAlign.CENTER, ...options });
+        const [schoolLogoParsed, secondLogoParsed] = await Promise.all([this.parseDataUrl(settings.schoolLogo), this.parseDataUrl(settings.secondLogo)]);
+        const schoolLogo = this.createDocxImage(schoolLogoParsed, 50, 50);
+        const secondLogo = this.createDocxImage(secondLogoParsed, 50, 50);
 
-        const docChildren: (Paragraph | Table)[] = [];
-
-        // Header
-        docChildren.push(p([boldText(details.schoolName.toUpperCase(), { size: 28 })], { alignment: AlignmentType.CENTER }));
-        docChildren.push(p([text(`SY ${details.schoolYear}`)], { alignment: AlignmentType.CENTER }));
-        docChildren.push(p([text(`${details.subject} - Grade ${details.gradeLevel}`)], { alignment: AlignmentType.CENTER }));
-        docChildren.push(p([text(`Teacher: ${details.teacherName}`)], { alignment: AlignmentType.CENTER }));
-        docChildren.push(p([]));
-
-        // Title
-        docChildren.push(p([boldText(lasContent.activityTitle, { size: 32, underline: { type: UnderlineType.SINGLE } })], { alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
-
-        // Learning Target
-        docChildren.push(p([boldText("Learning Target:")], { spacing: { after: 100 } }));
-        docChildren.push(p([text(lasContent.learningTarget)], { indent: { left: 360 }, spacing: { after: 200 } }));
-        
-        // References
-        docChildren.push(p([boldText("References:")], { spacing: { after: 100 } }));
-        lasContent.references.split('\n').forEach(line => {
-            docChildren.push(p([text(line)], { indent: { left: 360 } }));
+        const headerTable = new Table({
+            width: { size: 9505, type: WidthType.DXA },
+            columnWidths: [20, 60, 20],
+            borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [p( (schoolLogo && secondLogo) ? [schoolLogo, new TextRun("  "), secondLogo] : (schoolLogo ? [schoolLogo] : (secondLogo ? [secondLogo] : [])) )], verticalAlign: VerticalAlign.CENTER }),
+                        new TableCell({ children: [p([boldText("Dynamic Learning Program", { size: 28 })], { alignment: AlignmentType.CENTER }), p([boldText("LEARNING ACTIVITY SHEET", { size: 24 })], { alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }),
+                        new TableCell({
+                            children: [
+                                new Table({
+                                    rows: [
+                                        new TableRow({ children: [new TableCell({ children: [p([text(`S.Y. ${details.schoolYear}`, { size: 20 })], { alignment: AlignmentType.CENTER })], borders: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} } })] }),
+                                        new TableRow({ children: [new TableCell({ children: [p([])], verticalAlign: VerticalAlign.CENTER, height: { value: 400, rule: HeightRule.EXACT } })] })
+                                    ]
+                                })
+                            ],
+                            verticalAlign: VerticalAlign.TOP,
+                        }),
+                    ]
+                })
+            ]
         });
-        docChildren.push(p([]));
+        docChildren.push(headerTable);
 
-        // Concept Notes
-        if (lasContent.conceptNotes && lasContent.conceptNotes.length > 0) {
-            lasContent.conceptNotes.forEach(note => {
-                docChildren.push(p([boldText(note.title, { underline: { type: UnderlineType.SINGLE } })], { spacing: { after: 100 } }));
-                note.content.split('\n').forEach(line => {
-                    docChildren.push(p([text(line)], { indent: { left: 360 }, spacing: { after: 50 } }));
+        const infoTable = new Table({
+            width: { size: 9505, type: WidthType.DXA },
+            rows: [
+                new TableRow({ children: [new TableCell({ children: [p([boldText("Name:"), new TextRun({ text: "____________________________________", underline: {} })])] }), new TableCell({ children: [p([boldText("Score:")], { alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } })] }),
+                new TableRow({ children: [new TableCell({ children: [p([boldText("Grade & Section:"), new TextRun({ text: "_________________________", underline: {} })])] }), new TableCell({ children: [p([boldText("Date:")], { alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } })] })
+            ]
+        });
+        docChildren.push(infoTable);
+
+        const activityTypeTable = new Table({
+            width: { size: 9505, type: WidthType.DXA },
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [p([boldText("Type of Activity:"), text(" (Check or choose from below.)")])], shading: { type: ShadingType.CLEAR, fill: "000000" }, margins: { left: 100 } }),
+                    ]
+                }),
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            children: [ p([ checkBox(), text(" Concept Notes"), new TextRun("\t\t"), checkBox(), text(" Performance Task"), new TextRun("\t\t"), checkBox(), text(" Formal Theme"), new TextRun("\t\t"), checkBox(), text(" Others: _______________") ]), p([ checkBox(), text(" Skills: Exercise / Drill"), new TextRun("\t"), checkBox(), text(" Illustration"), new TextRun("\t\t\t"), checkBox(), text(" Informal Theme") ]) ],
+                            margins: { left: 100, top: 100, bottom: 100 },
+                        })
+                    ]
+                })
+            ]
+        });
+        docChildren.push(activityTypeTable);
+
+        const mainBodyContent: (Paragraph | Table)[] = [];
+        lasContent.conceptNotes.forEach(note => { mainBodyContent.push(p([boldText(note.title, { underline: { type: UnderlineType.SINGLE } })])); mainBodyContent.push(p([text(note.content)])); mainBodyContent.push(p([])); });
+        lasContent.activities.forEach(activity => {
+            mainBodyContent.push(p([boldText(activity.title, { size: 24, underline: { type: UnderlineType.SINGLE } })]));
+            mainBodyContent.push(p([text(activity.instructions, { italics: true })]));
+            if (activity.questions) { activity.questions.forEach(q => { mainBodyContent.push(p([text(q.questionText)], { numbering: { reference: "las-q", level: 0 } })); if (q.options) { q.options.forEach(opt => mainBodyContent.push(p([text(opt)], { numbering: { reference: "las-q", level: 1 } }))); } }); }
+            if (activity.rubric) {
+                mainBodyContent.push(p([boldText("Rubric")], { spacing: { before: 200 } }));
+                const rubricTable = new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [80, 20],
+                    rows: [ new TableRow({ children: [new TableCell({ children: [p([boldText("Criteria")])] }), new TableCell({ children: [p([boldText("Points")])] })] }), ...activity.rubric.map(r => new TableRow({ children: [new TableCell({ children: [p([text(r.criteria)])] }), new TableCell({ children: [p([text(String(r.points))])] })] })) ],
                 });
-                docChildren.push(p([]));
-            });
-        }
-        
-        // Activities
-        if (lasContent.activities && lasContent.activities.length > 0) {
-            docChildren.push(p([boldText("ACTIVITIES", { size: 28 })], { alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+                mainBodyContent.push(rubricTable);
+            }
+             mainBodyContent.push(p([]));
+        });
 
-            lasContent.activities.forEach(activity => {
-                docChildren.push(p([boldText(activity.title, { size: 26, underline: { type: UnderlineType.SINGLE } })], { spacing: { after: 100 } }));
-                docChildren.push(p([text(activity.instructions, { italics: true })], { indent: { left: 360 }, spacing: { after: 200 } }));
-
-                if (activity.questions && activity.questions.length > 0) {
-                    activity.questions.forEach(q => {
-                        docChildren.push(p([text(q.questionText)], { numbering: { reference: "las-questions", level: 0 } }));
-                        if (q.options) {
-                            q.options.forEach(opt => {
-                                docChildren.push(p([text(opt)], { numbering: { reference: "las-questions", level: 1 } }));
-                            });
-                        }
-                    });
-                     docChildren.push(p([]));
-                }
-
-                if (activity.rubric && activity.rubric.length > 0) {
-                    docChildren.push(p([boldText("Rubric")], { spacing: { before: 200, after: 100 } }));
-                    const rubricHeader = new TableRow({
-                        children: [
-                            createCell([p([boldText("Criteria")])]),
-                            createCell([p([boldText("Points")], { alignment: AlignmentType.CENTER })]),
-                        ],
-                    });
-                    const rubricRows = activity.rubric.map(item => new TableRow({
-                        children: [
-                            createCell([p([text(item.criteria)])]),
-                            createCell([p([text(String(item.points))], { alignment: AlignmentType.CENTER })]),
-                        ],
-                    }));
-                    docChildren.push(new Table({
-                        rows: [rubricHeader, ...rubricRows],
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        columnWidths: [80, 20],
-                    }));
-                     docChildren.push(p([]));
-                }
-            });
-        }
-
-        const numberingConfig = {
-            config: [
-                {
-                    reference: "las-questions",
-                    levels: [
-                        { level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
-                        { level: 1, format: LevelFormat.LOWER_LETTER, text: "%2.", style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
-                    ],
-                },
+        const mainContentTable = new Table({
+            width: { size: 9505, type: WidthType.DXA },
+            rows: [
+                new TableRow({ children: [new TableCell({ children: [p([boldText("Activity Title:")])], shading: { type: ShadingType.CLEAR, fill: "000000" } }), new TableCell({ children: [p([text(` ${lasContent.activityTitle}`)])] })] }),
+                new TableRow({ children: [new TableCell({ children: [p([boldText("Learning Target:")])], shading: { type: ShadingType.CLEAR, fill: "000000" } }), new TableCell({ children: [p([text(` ${lasContent.learningTarget}`)])] })] }),
+                new TableRow({ children: [new TableCell({ children: [p([boldText("References:")])], shading: { type: ShadingType.CLEAR, fill: "000000" }, verticalAlign: VerticalAlign.TOP }), new TableCell({ children: [p([text(" (Author, Title, Pages)")]), p([text(lasContent.references, { size: 18 })])] })] }),
+                new TableRow({ children: [new TableCell({ children: mainBodyContent, columnSpan: 2, height: { value: 8000, rule: HeightRule.ATLEAST } })] }),
             ],
-        };
+        });
+        docChildren.push(mainContentTable);
 
         const doc = new Document({
-            numbering: numberingConfig,
+            numbering: { config: [ { reference: "las-q", levels: [ { level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } } } }, { level: 1, format: LevelFormat.LOWER_LETTER, text: "%2.", style: { paragraph: { indent: { left: 1440, hanging: 360 } } } } ], } ], },
             sections: [{ 
-                properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, // 1 inch margins
+                properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, // 0.5 inch margins
                 children: docChildren
             }]
         });

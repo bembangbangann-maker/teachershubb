@@ -399,7 +399,7 @@ const LessonPlanners: React.FC = () => {
                 schoolYear: settings.schoolYear,
                 schoolName: settings.schoolName,
                 teacherName: settings.teacherName,
-            }, lasContent);
+            }, lasContent, settings);
             toast.success('Learning Sheet downloaded successfully!', { id: toastId });
         } catch (error) {
             let message = "An unknown error occurred.";
