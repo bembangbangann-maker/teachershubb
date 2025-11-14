@@ -64,6 +64,7 @@ const LessonPlanners: React.FC = () => {
         approvedByName: (settings.principalName || '').toUpperCase(),
         approvedByDesignation: settings.principalDesignation || 'School Principal II',
         language: 'English',
+        dlpFormat: 'Standard DepEd',
     });
     const [dlpContent, setDlpContent] = useState<DlpContent | null>(null);
 
@@ -253,6 +254,7 @@ const LessonPlanners: React.FC = () => {
                 subject: dlpForm.subject,
                 teacherPosition,
                 language: dlpForm.language as 'English' | 'Filipino',
+                dlpFormat: dlpForm.dlpFormat,
             });
             setDlpContent(content);
             toast.success('DLP generated successfully!', { id: toastId });
@@ -568,6 +570,14 @@ const LessonPlanners: React.FC = () => {
                                     <select id="language" value={dlpForm.language} onChange={handleDlpFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
                                         <option value="English">English</option>
                                         <option value="Filipino">Filipino</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="dlpFormat" className="block text-sm font-medium text-base-content mb-1">DLP Format<span className="text-error">*</span></label>
+                                    <select id="dlpFormat" value={dlpForm.dlpFormat} onChange={handleDlpFormChange} className="w-full bg-base-100 border border-base-300 rounded-md p-2 h-10">
+                                        <option value="Standard DepEd">Standard DepEd Format</option>
+                                        <option value="4As">4A's (Activity, Analysis, Abstraction, Application)</option>
+                                        <option value="5Es">5E's (Engage, Explore, Explain, Elaborate, Evaluate)</option>
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

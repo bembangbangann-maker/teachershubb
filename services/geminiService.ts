@@ -300,34 +300,47 @@ const dlpProcedureSchema = { type: Type.OBJECT, properties: { title: { type: Typ
 const dlpEvaluationQuestionSchema = { type: Type.OBJECT, properties: { question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING } }, required: ["question", "options", "answer"] };
 const dlpContentSchema = { type: Type.OBJECT, properties: { contentStandard: { type: Type.STRING }, performanceStandard: { type: Type.STRING }, topic: { type: Type.STRING }, learningReferences: { type: Type.STRING }, learningMaterials: { type: Type.STRING }, procedures: { type: Type.ARRAY, items: dlpProcedureSchema }, evaluationQuestions: { type: Type.ARRAY, items: dlpEvaluationQuestionSchema }, remarksContent: { type: Type.STRING } }, required: ["contentStandard", "performanceStandard", "topic", "learningReferences", "learningMaterials", "procedures", "evaluationQuestions", "remarksContent"] };
 
-export const generateDlpContent = async (details: { gradeLevel: string; learningCompetency: string; lessonObjective: string; previousLesson: string; selectedQuarter: string; subject: string; teacherPosition: 'Beginning' | 'Proficient' | 'Highly Proficient' | 'Distinguished'; language: 'English' | 'Filipino'; }): Promise<DlpContent> => {
+export const generateDlpContent = async (details: { gradeLevel: string; learningCompetency: string; lessonObjective: string; previousLesson: string; selectedQuarter: string; subject: string; teacherPosition: 'Beginning' | 'Proficient' | 'Highly Proficient' | 'Distinguished'; language: 'English' | 'Filipino'; dlpFormat: string; }): Promise<DlpContent> => {
     const model = "gemini-2.5-pro";
-    const { gradeLevel, language, subject, learningCompetency, lessonObjective, teacherPosition } = details;
-    const prompt = `Generate a complete and detailed DepEd-aligned Daily Lesson Plan (DLP) in ${language} for a ${gradeLevel} ${subject} class.
+    const { gradeLevel, language, subject, learningCompetency, lessonObjective, teacherPosition, dlpFormat } = details;
+
+    let procedureInstruction = '';
+    switch (dlpFormat) {
+        case '4As':
+            procedureInstruction = `The 'procedures' array must follow the 4A's format. The titles must be exactly: "Activity", "Analysis", "Abstraction", and "Application". You must also include a final procedure with the title "Evaluation".`;
+            break;
+        case '5Es':
+            procedureInstruction = `The 'procedures' array must follow the 5E's format. The titles must be exactly: "Engage", "Explore", "Explain", "Elaborate", and "Evaluate".`;
+            break;
+        default: // Standard DepEd
+            procedureInstruction = `The 'procedures' array must contain objects with titles that strictly follow this DepEd structure:
+- Reviewing previous lesson or presenting the new lesson
+- Establishing a purpose for the lesson
+- Presenting examples/instances of the new lesson
+- Discussing new concepts and practicing new skills #1 (LOTS)
+- Discussing new concepts and practicing new skills #2 (HOTS)
+- Developing mastery (Leads to Formative Assessment)
+- Finding practical applications of concepts and skills in daily living
+- Making generalizations and abstractions about the lesson
+- Evaluating learning`;
+            break;
+    }
+
+    const prompt = `Generate a complete and detailed DepEd-aligned Daily Lesson Plan (DLP) in ${language} for a ${gradeLevel} ${subject} class using the ${dlpFormat} format.
 
 **Lesson Details:**
 - Learning Competency: "${learningCompetency}"
 - Lesson Objective: "${lessonObjective}"
 - Teacher's Career Stage for PPST alignment: ${teacherPosition}
 
-**Strict Instructions:**
-1.  **Procedure Structure:** The 'procedures' array must contain objects with titles that strictly follow this DepEd structure.
-    - Reviewing previous lesson or presenting the new lesson
-    - Establishing a purpose for the lesson
-    - Presenting examples/instances of the new lesson
-    - Discussing new concepts and practicing new skills #1 (LOTS)
-    - Discussing new concepts and practicing new skills #2 (HOTS)
-    - Developing mastery (Leads to Formative Assessment)
-    - Finding practical applications of concepts and skills in daily living
-    - Making generalizations and abstractions about the lesson
-    - Evaluating learning
-2.  **Rich Content Formatting:** You MUST provide detailed, non-placeholder content for EVERY procedure step.
+**CRITICAL INSTRUCTIONS:**
+1.  **Procedure Structure:** ${procedureInstruction}
+2.  **Evaluation Section:** The "Evaluating learning" procedure (or the "Evaluation" procedure in 4A's/5E's) MUST be followed by the 'evaluationQuestions' array in the JSON. This array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer.
+3.  **Rich Content Formatting:** You MUST provide detailed, non-placeholder content for EVERY procedure step.
     - Use Markdown for emphasis: use **bold** and *italics* for important keywords. Use ALL CAPS for very important headings or terms.
-    - Structure discussions clearly. For "Discussing new concepts" procedures, explicitly include headings like "**LOTS Questions:**" or "**HOTS Questions:**" followed by a numbered list of questions.
-    - The "Developing mastery" procedure MUST include a clear title for the activity, formatted like "**Activity Title:** [Your Title Here]".
-    - Ensure content includes specific Teacher's Activities and Learner's Activities.
-3.  **PPST Indicators:** For each procedure, provide a relevant PPST COI based on DepEd Order No. 14, s. 2023 for a ${teacherPosition} teacher.
-4.  **Evaluation:** The 'evaluationQuestions' array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer.
+    - Structure discussions clearly. Include specific Teacher's Activities and Learner's Activities. When asking questions, use headings like "**LOTS Questions:**" or "**HOTS Questions:**" where appropriate.
+    - Formative assessment activities MUST include a clear title, formatted like "**Activity Title:** [Your Title Here]".
+4.  **PPST Indicators:** For each procedure, provide a relevant PPST COI based on DepEd Order No. 14, s. 2023 for a ${teacherPosition} teacher.
 
 Generate the output as a single, valid JSON object that strictly adheres to the provided schema. Do not include any extra text or markdown formatting outside of the JSON structure.`;
 
