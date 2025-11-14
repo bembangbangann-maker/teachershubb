@@ -205,6 +205,50 @@ class DocxService {
         }, 100);
     }
 
+    private parseMarkdownToParagraphs(markdownText: string): Paragraph[] {
+        if (!markdownText) return [new Paragraph("")]; // Handle empty content
+    
+        const paragraphs: Paragraph[] = [];
+        const lines = markdownText.split('\n');
+    
+        for (const line of lines) {
+            if (line.trim() === '') {
+                // An empty line adds vertical space.
+                paragraphs.push(new Paragraph({ children: [], spacing: { after: 100 } }));
+                continue;
+            }
+    
+            const children: TextRun[] = [];
+            // Regex to split by bold/italic markers, keeping them in the result
+            const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g).filter(Boolean);
+    
+            for (const part of parts) {
+                const fontOptions = { font: "Times New Roman", size: 22 };
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    children.push(new TextRun({ text: part.slice(2, -2), bold: true, ...fontOptions }));
+                } else if (part.startsWith('*') && part.endsWith('*')) {
+                    children.push(new TextRun({ text: part.slice(1, -1), italics: true, ...fontOptions }));
+                } else {
+                    children.push(new TextRun({ text: part, ...fontOptions }));
+                }
+            }
+            
+            // Check for numbered lists like "1. " or "  1. "
+            const isListItem = /^\s*\d+\.\s+/.test(line);
+    
+            paragraphs.push(new Paragraph({
+                children,
+                numbering: isListItem ? {
+                    reference: "dlp-list",
+                    level: 0,
+                } : undefined,
+                spacing: { after: isListItem ? 80 : 200 } // Add space after paragraphs
+            }));
+        }
+    
+        return paragraphs;
+    }
+
 
   public async generateAttendanceDocx(students: Student[], attendance: Attendance[], currentDate: Date, schoolSettings: SchoolSettings): Promise<void> {
     const year = currentDate.getUTCFullYear();
@@ -1308,7 +1352,7 @@ class DocxService {
         const headerShading = { shading: { type: ShadingType.CLEAR, fill: gradeLevelColor } };
 
         const procedureRows = dlpContent.procedures.map(proc => {
-            const contentParagraphs = proc.content.split('\n').map(line => p([text(line)]));
+            const contentParagraphs = this.parseMarkdownToParagraphs(proc.content);
             return new TableRow({
                 children: [
                     createCell([p([boldText(proc.title)])]),
@@ -1383,7 +1427,10 @@ class DocxService {
         });
 
         const answerKeySection = [ new Paragraph({ children: [new PageBreak()] }), p([boldText(t.answerKey, { size: 24 })], { alignment: AlignmentType.CENTER }), p([]), ...(dlpContent.evaluationQuestions || []).map((q, i) => p([text(`${i + 1}. ${q.answer}`)], { numbering: { reference: "answer-key-num", level: 0 } })) ];
-        const numbering = { config: [ { reference: "answer-key-num", levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } } }, }], }, ], };
+        const numbering = { config: [ 
+            { reference: "answer-key-num", levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } } }, }], },
+            { reference: "dlp-list", levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", style: { paragraph: { indent: { left: 720, hanging: 360 } }, }, }], },
+        ], };
         
         const doc = new Document({
             numbering,

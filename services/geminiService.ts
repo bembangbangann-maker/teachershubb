@@ -321,7 +321,11 @@ export const generateDlpContent = async (details: { gradeLevel: string; learning
     - Finding practical applications of concepts and skills in daily living
     - Making generalizations and abstractions about the lesson
     - Evaluating learning
-2.  **Complete Content:** You MUST provide detailed, non-placeholder content for EVERY procedure step. Ensure each step includes specific Teacher's Activities, Learner's Activities, and instructional materials. Explicitly label sections that focus on Lower-Order Thinking Skills (LOTS) and Higher-Order Thinking Skills (HOTS). Do not use placeholders.
+2.  **Rich Content Formatting:** You MUST provide detailed, non-placeholder content for EVERY procedure step.
+    - Use Markdown for emphasis: use **bold** and *italics* for important keywords. Use ALL CAPS for very important headings or terms.
+    - Structure discussions clearly. For "Discussing new concepts" procedures, explicitly include headings like "**LOTS Questions:**" or "**HOTS Questions:**" followed by a numbered list of questions.
+    - The "Developing mastery" procedure MUST include a clear title for the activity, formatted like "**Activity Title:** [Your Title Here]".
+    - Ensure content includes specific Teacher's Activities and Learner's Activities.
 3.  **PPST Indicators:** For each procedure, provide a relevant PPST COI based on DepEd Order No. 14, s. 2023 for a ${teacherPosition} teacher.
 4.  **Evaluation:** The 'evaluationQuestions' array **must contain exactly 5 multiple-choice questions**. Each question must have at least three options and a correct answer.
 
