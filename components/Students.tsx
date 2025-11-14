@@ -14,7 +14,6 @@ import { useAppContext } from '../contexts/AppContext';
 import { dataService } from '../services/dataService';
 import { docxService } from '../services/docxService';
 import { excelService } from '../services/excelService';
-// Fix: import specific function instead of a non-existent service object
 import { processAttendanceCommand } from '../services/geminiService';
 
 const Students: React.FC = () => {
@@ -213,7 +212,6 @@ const Students: React.FC = () => {
 
     } catch (err) {
         toast.dismiss(toastId);
-        // Fix: Explicitly handle potential error types to ensure a string is passed to toast.error.
         let message = "An unknown error occurred during processing.";
         if (err instanceof Error) message = err.message;
         toast.error(message);
@@ -266,7 +264,6 @@ const Students: React.FC = () => {
     const toastId = toast.loading("AI is processing your command...");
 
     try {
-      // Fix: call the imported function directly
       const result = await processAttendanceCommand(aiCommand, filteredStudents);
 
       if (!result || result.studentIds.length === 0) {
