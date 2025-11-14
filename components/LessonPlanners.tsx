@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAppContext } from '../contexts/AppContext';
 import { generateDlpContent, generateQuizContent, generateRubricForActivity, generateDllContent, generateLearningActivitySheet } from '../services/geminiService';
-import { DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, GeneratedQuizSection, DllContent, DlpProcedure, LearningActivitySheet } from '../types';
+import { DlpContent, GeneratedQuiz, QuizType, DlpRubricItem, GeneratedQuizSection, DllContent, DlpProcedure, LearningActivitySheet, SchoolSettings } from '../types';
 import Header from './Header';
 import { SparklesIcon, DownloadIcon, ClipboardCheckIcon } from './icons';
 import { docxService } from '../services/docxService';
@@ -395,10 +395,8 @@ const LessonPlanners: React.FC = () => {
         const toastId = toast.loading('Generating Word document...');
         try {
             await docxService.generateLasDocx({
-                ...lasForm,
                 schoolYear: settings.schoolYear,
-                schoolName: settings.schoolName,
-                teacherName: settings.teacherName,
+                ...lasForm
             }, lasContent, settings);
             toast.success('Learning Sheet downloaded successfully!', { id: toastId });
         } catch (error) {
@@ -844,51 +842,7 @@ const LessonPlanners: React.FC = () => {
                         )}
                         
                         {!isLoading && lasContent && activeTab === 'las' && (
-                             <>
-                                <div className="p-4 border-b border-base-300 flex justify-between items-center flex-shrink-0">
-                                    <h3 className="text-xl font-bold">{lasContent.activityTitle}</h3>
-                                    <button onClick={handleDownloadLasDocx} disabled={isLoading} className="flex items-center bg-secondary hover:bg-secondary-focus text-white font-bold py-2 px-4 rounded-lg"><DownloadIcon className="w-5 h-5 mr-2"/>Download Word File</button>
-                                </div>
-                                <div className="p-6 overflow-y-auto flex-grow min-h-0 prose prose-invert max-w-none prose-headings:text-primary prose-strong:text-base-content prose-table:bg-base-100 prose-thead:bg-base-300/50 prose-th:p-2 prose-td:p-2 prose-li:my-1">
-                                    <h4>Learning Target</h4>
-                                    <p>{lasContent.learningTarget}</p>
-                                    
-                                    <h4>References</h4>
-                                    <p className="whitespace-pre-wrap text-sm">{lasContent.references}</p>
-
-                                    {lasContent.conceptNotes.map((note, index) => (
-                                        <div key={index} className="bg-base-100 p-4 rounded-md my-4">
-                                            <h4>{note.title}</h4>
-                                            <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{__html: note.content}}></div>
-                                        </div>
-                                    ))}
-                                    
-                                    {lasContent.activities.map((activity, index) => (
-                                        <div key={index} className="mt-6">
-                                            <h3>{activity.title}</h3>
-                                            <p className="italic">{activity.instructions}</p>
-                                            {activity.questions && (
-                                                <ol className="list-decimal list-inside space-y-4 mt-4">
-                                                    {activity.questions.map((q, qIndex) => (
-                                                        <li key={qIndex}>
-                                                            <p>{q.questionText}</p>
-                                                            {q.options && <ul className="list-none pl-6 text-sm"> {q.options.map((opt, oi) => <li key={oi}>{String.fromCharCode(65 + oi)}. {opt}</li>)}</ul>}
-                                                        </li>
-                                                    ))}
-                                                </ol>
-                                            )}
-                                             {activity.rubric && (
-                                                <div className="mt-4 overflow-x-auto">
-                                                    <h5 className="font-bold">Rubric</h5>
-                                                    <table><thead><tr><th>Criteria</th><th>Points</th></tr></thead>
-                                                        <tbody>{activity.rubric.map(r => <tr key={r.criteria}><td>{r.criteria}</td><td>{r.points}</td></tr>)}</tbody>
-                                                    </table>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
+                           <LasPreview lasContent={lasContent} settings={settings} lasForm={lasForm} onDownload={handleDownloadLasDocx} />
                         )}
 
                         {!isLoading && quizContent && activeTab === 'quiz' && (
@@ -953,6 +907,111 @@ const LessonPlanners: React.FC = () => {
                 </div>
             </div>
         </div>
+    );
+};
+
+const LasPreview: React.FC<{ lasContent: LearningActivitySheet, settings: SchoolSettings, lasForm: any, onDownload: () => void }> = ({ lasContent, settings, lasForm, onDownload }) => {
+    return (
+        <>
+            <div className="p-4 border-b border-base-300 flex justify-between items-center flex-shrink-0">
+                <h3 className="text-xl font-bold">{lasContent.activityTitle}</h3>
+                <button onClick={onDownload} className="flex items-center bg-secondary hover:bg-secondary-focus text-white font-bold py-2 px-4 rounded-lg"><DownloadIcon className="w-5 h-5 mr-2"/>Download Word File</button>
+            </div>
+            <div className="p-4 md:p-6 overflow-y-auto flex-grow min-h-0 bg-base-100">
+                <div className="bg-white text-black p-8 mx-auto max-w-4xl font-serif text-sm shadow-lg">
+                    {/* Header */}
+                    <div className="grid grid-cols-[1fr,3fr,1fr] items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            {settings.schoolLogo && <img src={settings.schoolLogo} alt="School Logo" className="w-12 h-12 object-contain" />}
+                            {settings.secondLogo && <img src={settings.secondLogo} alt="Second Logo" className="w-12 h-12 object-contain" />}
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-lg">Dynamic Learning Program</p>
+                            <p className="font-bold text-base">LEARNING ACTIVITY SHEET</p>
+                        </div>
+                        <div className="border border-black text-center p-1">
+                            S.Y. {settings.schoolYear}
+                        </div>
+                    </div>
+                    {/* Info */}
+                    <table className="w-full my-4 text-sm">
+                        <tbody>
+                            <tr>
+                                <td className="py-1 pr-4"><strong>Name:</strong> <span className="border-b border-black inline-block w-4/5"></span></td>
+                                <td className="py-1 w-1/4"><strong>Score:</strong></td>
+                            </tr>
+                             <tr>
+                                <td className="py-1 pr-4"><strong>Grade & Section:</strong> <span className="border-b border-black inline-block w-2/3"></span></td>
+                                <td className="py-1 w-1/4"><strong>Date:</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                     {/* Type of Activity */}
+                    <table className="w-full border-collapse border border-black text-sm">
+                        <tbody>
+                            <tr className="bg-black text-white"><td className="p-2 font-bold" colSpan={3}>Type of Activity: <span className="font-normal">(Check or choose from below.)</span></td></tr>
+                            <tr>
+                                <td className="p-2 border-r border-black">☐ Concept Notes</td>
+                                <td className="p-2 border-r border-black">☐ Performance Task</td>
+                                <td className="p-2">☐ Formal Theme</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border-r border-black">☐ Skills: Exercise / Drill</td>
+                                <td className="p-2 border-r border-black">☐ Illustration</td>
+                                <td className="p-2">☐ Informal Theme</td>
+                            </tr>
+                             <tr>
+                                <td className="p-2" colSpan={3}>☐ Others: <span className="border-b border-black inline-block w-1/4"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {/* Main Content Table */}
+                     <table className="w-full border-collapse border border-black text-sm mt-[-1px]">
+                         <tbody>
+                            <tr className="bg-black text-white"><td className="w-1/4 p-2 font-bold">Activity Title:</td><td className="w-3/4 p-2 bg-white text-black font-semibold">{lasContent.activityTitle}</td></tr>
+                            <tr className="bg-black text-white"><td className="p-2 font-bold align-top">Learning Target:</td><td className="p-2 bg-white text-black whitespace-pre-wrap">{lasContent.learningTarget}</td></tr>
+                            <tr className="bg-black text-white"><td className="p-2 font-bold align-top">References:</td><td className="p-2 bg-white text-black"><p className="text-xs italic">(Author, Title, Pages)</p><p className="whitespace-pre-wrap text-xs">{lasContent.references}</p></td></tr>
+                        </tbody>
+                    </table>
+                    
+                    {/* Content Body */}
+                    <div className="pt-4 space-y-4">
+                        {lasContent.conceptNotes.map((note, index) => (
+                            <div key={index}>
+                                <h4 className="font-bold underline">{note.title}</h4>
+                                <p className="whitespace-pre-wrap text-justify">{note.content}</p>
+                            </div>
+                        ))}
+                        {lasContent.activities.map((activity, index) => (
+                            <div key={index} className="pt-4">
+                                <h3 className="text-base font-bold underline">{activity.title}</h3>
+                                <p className="italic">{activity.instructions}</p>
+                                {activity.questions && (
+                                    <ol className="list-decimal list-outside pl-8 mt-2 space-y-2">
+                                        {activity.questions.map((q, qIndex) => (
+                                            <li key={qIndex}>
+                                                <p>{q.questionText}</p>
+                                                {q.options && <ul className="list-none pl-4 text-sm"> {q.options.map((opt, oi) => <li key={oi}>{String.fromCharCode(65 + oi)}. {opt}</li>)}</ul>}
+                                                {(q.type === 'Essay' || q.type === 'Problem-solving') && <div className="h-20"></div>}
+                                            </li>
+                                        ))}
+                                    </ol>
+                                )}
+                                {activity.rubric && (
+                                    <div className="mt-4">
+                                        <h5 className="font-bold">Rubric</h5>
+                                        <table className="w-full text-xs border-collapse border border-black">
+                                            <thead className="bg-gray-200"><tr><th className="p-1 border border-black">Criteria</th><th className="p-1 border border-black w-1/6">Points</th></tr></thead>
+                                            <tbody>{activity.rubric.map(r => <tr key={r.criteria}><td className="p-1 border border-black">{r.criteria}</td><td className="p-1 border border-black text-center">{r.points}</td></tr>)}</tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </>
     );
 };
 
